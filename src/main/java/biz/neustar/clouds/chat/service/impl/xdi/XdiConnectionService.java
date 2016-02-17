@@ -4,6 +4,7 @@ import java.security.PrivateKey;
 import java.util.ArrayList;
 import java.util.List;
 
+import net.rn.clouds.chat.dao.impl.EntityCloudHibernateDAO;
 import xdi2.client.XDIClient;
 import xdi2.client.impl.http.XDIHttpClient;
 import xdi2.client.util.XDIClientUtil;
@@ -20,8 +21,8 @@ import xdi2.core.features.nodetypes.XdiEntityInstance;
 import xdi2.core.features.nodetypes.XdiEntityInstanceUnordered;
 import xdi2.core.features.nodetypes.XdiInnerRoot;
 import xdi2.core.features.signatures.RSASignature;
-import xdi2.core.features.signatures.Signature;
 import xdi2.core.impl.memory.MemoryGraphFactory;
+import xdi2.core.security.signature.create.RSAStaticPrivateKeySignatureCreator;
 import xdi2.core.syntax.XDIAddress;
 import xdi2.core.syntax.XDIArc;
 import xdi2.core.syntax.XDIStatement;
@@ -36,8 +37,6 @@ import biz.neustar.clouds.chat.exceptions.ConnectionNotFoundException;
 import biz.neustar.clouds.chat.model.Connection;
 import biz.neustar.clouds.chat.model.Log;
 import biz.neustar.clouds.chat.service.ConnectionService;
-
-import xdi2.core.security.signature.create.RSAStaticPrivateKeySignatureCreator;
 
 public class XdiConnectionService implements ConnectionService {
 

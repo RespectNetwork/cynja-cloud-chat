@@ -128,5 +128,5 @@ public class XdiConnection implements Connection {
                 .getRelation(XDIDictionaryConstants.XDI_ADD_IS_REF).getTargetXDIAddress();
 
         return CloudName.fromXDIAddress(mrXDIAddress);
-    }
+    }      
 }
