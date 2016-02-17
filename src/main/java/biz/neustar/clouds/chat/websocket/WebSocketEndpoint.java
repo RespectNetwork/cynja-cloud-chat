@@ -29,7 +29,7 @@ public class WebSocketEndpoint extends javax.websocket.Endpoint {
 
 	private static final Logger log = LoggerFactory.getLogger(WebSocketEndpoint.class);
 
-	private static final String PATH = "/1/chat/{child1}/{child2}";
+	private static final String PATH = "/{version}/chat/{child1}/{child2}";
 
 	public static final List<WebSocketMessageHandler> WEBSOCKETMESSAGEHANDLERS = new ArrayList<WebSocketMessageHandler> ();
 
@@ -109,7 +109,13 @@ public class WebSocketEndpoint extends javax.websocket.Endpoint {
 
 			// check connection
 
-			Connection connection = CynjaCloudChat.connectionServiceImpl.findConnection(child1, child1SecretToken, child2);
+			Connection connection = null;
+			String version = session.getPathParameters().get("version");
+			if("1".equalsIgnoreCase(version)){
+				connection = CynjaCloudChat.connectionService.findConnection(child1, child1SecretToken, child2);
+			}else if("v2".equalsIgnoreCase(version)){
+				connection = CynjaCloudChat.connectionServiceImpl.findConnection(child1, child1SecretToken, child2);
+			}
 
 			if (connection == null) {
 

@@ -146,7 +146,7 @@ function chatStart() {
 	var child2 = $("#chatChild2").val().trim(); if (! child2) { alert("Please enter \"Child 2\""); return; }
 	var child1SecretToken = $("#chatChild1SecretToken").val().trim(); if (! child1SecretToken) { alert("Please enter \"Child 1 Secret Token\""); return; }
 
-	var url = window.location.href.replace("http", "ws") + "1/chat/" + encodeURIComponent(child1) + '/' + encodeURIComponent(child2) + '?child1SecretToken=' + child1SecretToken;
+	var url = window.location.href.replace("http", "ws") + "v2/chat/" + encodeURIComponent(child1) + '/' + encodeURIComponent(child2) + '?child1SecretToken=' + child1SecretToken;
 
 	ws = new WebSocket(url, ["cynja-chat"]);
 
