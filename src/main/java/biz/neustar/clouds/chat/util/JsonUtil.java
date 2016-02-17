@@ -6,6 +6,7 @@ import java.text.DateFormat;
 
 import javax.websocket.Session;
 
+import net.rn.clouds.chat.service.impl.ConnectionImpl;
 import biz.neustar.clouds.chat.CynjaCloudChat;
 import biz.neustar.clouds.chat.model.Connection;
 import biz.neustar.clouds.chat.model.Log;
@@ -68,6 +69,55 @@ public class JsonUtil {
 			child1JsonObject.add("blocked", gson.toJsonTree(connection.isBlocked1()));
 
 			Session[] sessions = CynjaCloudChat.sessionService.getSessions(connection);
+
+			JsonArray sessionsJsonArray = new JsonArray();
+
+			for (Session session : sessions) {
+
+				JsonObject sessionJsonObject = new JsonObject();
+				sessionJsonObject.add("id", gson.toJsonTree(session.getId()));
+				sessionJsonObject.add("open", gson.toJsonTree(session.isOpen()));
+
+				sessionsJsonArray.add(sessionJsonObject);
+			}
+
+			child1JsonObject.add("sessions", sessionsJsonArray);
+
+			childJsonArray.add(child1JsonObject);
+		}
+
+		return childrenJsonObject;
+	}
+	
+	public static JsonObject connectionToJson(Connection[] connections) {
+
+		JsonObject childrenJsonObject = new JsonObject();
+
+		for (Connection connection : connections) {
+			
+			ConnectionImpl connectionImpl = null;
+			if(connection == null){
+				continue;
+			}else if(connection instanceof ConnectionImpl){
+				connectionImpl = (ConnectionImpl)connection;
+			} 
+
+			JsonArray childJsonArray = childrenJsonObject.getAsJsonArray(connectionImpl.getChild1().toString());
+
+			if (childJsonArray == null) {
+
+				childJsonArray = new JsonArray();
+				childrenJsonObject.add(connectionImpl.getChild1().toString(), childJsonArray);
+			}
+
+			JsonObject child1JsonObject = new JsonObject();
+			child1JsonObject.add("cloud", gson.toJsonTree(connectionImpl.getChild2().toString()));			
+			child1JsonObject.add("name", gson.toJsonTree(connectionImpl.getConnectionName().toString()));						
+			child1JsonObject.add("approved", gson.toJsonTree(connectionImpl.isApproved1()));
+			child1JsonObject.add("blocked", gson.toJsonTree(connectionImpl.isBlocked1()));
+			child1JsonObject.add("isApprovalRequired", gson.toJsonTree(connectionImpl.isApprovalRequired()));
+
+			Session[] sessions = CynjaCloudChat.sessionService.getSessions(connectionImpl);
 
 			JsonArray sessionsJsonArray = new JsonArray();
 

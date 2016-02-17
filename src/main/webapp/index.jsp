@@ -20,9 +20,9 @@ function request() {
 	var child2 = $("#requestChild2").val().trim(); if (! child2) { alert("Please enter \"Child 2\""); return; }
 
 	$.ajax({
-	    url: '/1/request',
+	    url: '/v2/request',
 	    type: 'POST',
-	    data: 'child1=' + encodeURIComponent(child1) + '&' + 'child1SecretToken=' + encodeURIComponent(child1SecretToken) + '&' + 'child2=' + encodeURIComponent(child2),
+	    data: 'cloud1=' + encodeURIComponent(child1) + '&' + 'cloud1SecretToken=' + encodeURIComponent(child1SecretToken) + '&' + 'cloud2=' + encodeURIComponent(child2),
 	    success: function(data) { alert('success: ' + JSON.stringify(data)); },
 	    error: function(msg) { alert('error: ' + JSON.stringify(msg)); }
 	});
@@ -36,9 +36,9 @@ function approve() {
 	var child2 = $("#approveChild2").val().trim(); if (! child2) { alert("Please enter \"Child 2\""); return; }
 
 	$.ajax({
-	    url: '/1/approve',
+	    url: '/v2/approve',
 	    type: 'POST',
-	    data: 'parent=' + encodeURIComponent(parent) + '&' + 'parentSecretToken=' + encodeURIComponent(parentSecretToken) + '&' + 'child1=' + encodeURIComponent(child1) + '&' + 'child2=' + encodeURIComponent(child2),
+	    data: 'cloud=' + encodeURIComponent(parent) + '&' + 'cloudSecretToken=' + encodeURIComponent(parentSecretToken) + '&' + 'cloud1=' + encodeURIComponent(child1) + '&' + 'cloud2=' + encodeURIComponent(child2),
 	    success: function(data) { alert('success: ' + JSON.stringify(data)); },
 	    error: function(msg) { alert('error: ' + JSON.stringify(msg)); }
 	});
@@ -50,7 +50,7 @@ function viewasparent() {
 	var parentSecretToken = $("#viewasparentParentSecretToken").val().trim(); if (! parentSecretToken) { alert("Please enter \"Parent Secret Token\""); return; }
 
 	$.ajax({
-	    url: '/1/viewasparent',
+	    url: '/v2/viewasparent',
 	    type: 'POST',
 	    data: 'parent=' + encodeURIComponent(parent) + '&' + 'parentSecretToken=' + encodeURIComponent(parentSecretToken),
 	    success: function(data) { alert('success: ' + JSON.stringify(data)); },
@@ -64,9 +64,9 @@ function viewaschild() {
 	var childSecretToken = $("#viewaschildChildSecretToken").val().trim(); if (! childSecretToken) { alert("Please enter \"Child Secret Token\""); return; }
 
 	$.ajax({
-	    url: '/1/viewaschild',
+	    url: '/v2/viewaschild',
 	    type: 'POST',
-	    data: 'child=' + encodeURIComponent(child) + '&' + 'childSecretToken=' + encodeURIComponent(childSecretToken),
+	    data: 'cloud=' + encodeURIComponent(child) + '&' + 'cloudSecretToken=' + encodeURIComponent(childSecretToken),
 	    success: function(data) { alert('success: ' + JSON.stringify(data)); },
 	    error: function(msg) { alert('error: ' + JSON.stringify(msg)); }
 	});
@@ -96,9 +96,9 @@ function block() {
 	var child2 = $("#blockChild2").val().trim(); if (! child2) { alert("Please enter \"Child 2\""); return; }
 
 	$.ajax({
-	    url: '/1/block',
+	    url: '/v2/block',
 	    type: 'POST',
-	    data: 'parent=' + encodeURIComponent(parent) + '&' + 'parentSecretToken=' + encodeURIComponent(parentSecretToken) + '&' + 'child1=' + encodeURIComponent(child1) + '&' + 'child2=' + encodeURIComponent(child2),
+	    data: 'cloud=' + encodeURIComponent(parent) + '&' + 'cloudSecretToken=' + encodeURIComponent(parentSecretToken) + '&' + 'cloud1=' + encodeURIComponent(child1) + '&' + 'cloud2=' + encodeURIComponent(child2),
 	    success: function(data) { alert('success: ' + JSON.stringify(data)); },
 	    error: function(msg) { alert('error: ' + JSON.stringify(msg)); }
 	});
@@ -112,9 +112,9 @@ function unblock() {
 	var child2 = $("#unblockChild2").val().trim(); if (! child2) { alert("Please enter \"Child 2\""); return; }
 
 	$.ajax({
-	    url: '/1/unblock',
+	    url: '/v2/unblock',
 	    type: 'POST',
-	    data: 'parent=' + encodeURIComponent(parent) + '&' + 'parentSecretToken=' + encodeURIComponent(parentSecretToken) + '&' + 'child1=' + encodeURIComponent(child1) + '&' + 'child2=' + encodeURIComponent(child2),
+	    data: 'cloud=' + encodeURIComponent(parent) + '&' + 'cloudSecretToken=' + encodeURIComponent(parentSecretToken) + '&' + 'cloud1=' + encodeURIComponent(child1) + '&' + 'cloud2=' + encodeURIComponent(child2),
 	    success: function(data) { alert('success: ' + JSON.stringify(data)); },
 	    error: function(msg) { alert('error: ' + JSON.stringify(msg)); }
 	});
@@ -128,9 +128,9 @@ function delet() {
 	var child2 = $("#deleteChild2").val().trim(); if (! child2) { alert("Please enter \"Child 2\""); return; }
 
 	$.ajax({
-	    url: '/1/delete',
+	    url: '/v2/delete',
 	    type: 'POST',
-	    data: 'parent=' + encodeURIComponent(parent) + '&' + 'parentSecretToken=' + encodeURIComponent(parentSecretToken) + '&' + 'child1=' + encodeURIComponent(child1) + '&' + 'child2=' + encodeURIComponent(child2),
+	    data: 'cloud=' + encodeURIComponent(parent) + '&' + 'cloudSecretToken=' + encodeURIComponent(parentSecretToken) + '&' + 'cloud1=' + encodeURIComponent(child1) + '&' + 'cloud2=' + encodeURIComponent(child2),
 	    success: function(data) { alert('success: ' + JSON.stringify(data)); },
 	    error: function(msg) { alert('error: ' + JSON.stringify(msg)); }
 	});
@@ -146,7 +146,7 @@ function chatStart() {
 	var child2 = $("#chatChild2").val().trim(); if (! child2) { alert("Please enter \"Child 2\""); return; }
 	var child1SecretToken = $("#chatChild1SecretToken").val().trim(); if (! child1SecretToken) { alert("Please enter \"Child 1 Secret Token\""); return; }
 
-	var url = window.location.href.replace("http", "ws") + "1/chat/" + encodeURIComponent(child1) + '/' + encodeURIComponent(child2) + '?child1SecretToken=' + child1SecretToken;
+	var url = window.location.href.replace("http", "ws") + "v2/chat/" + encodeURIComponent(child1) + '/' + encodeURIComponent(child2) + '?child1SecretToken=' + child1SecretToken;
 
 	ws = new WebSocket(url, ["cynja-chat"]);
 
