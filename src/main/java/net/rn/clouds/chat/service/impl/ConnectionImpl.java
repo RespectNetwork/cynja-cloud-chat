@@ -33,6 +33,11 @@ public class ConnectionImpl implements Connection{
 		this.isBlocked1 = isBlocked1;
 		this.isBlocked2 = isBlocked2;
 		this.connectionName = connectionName;
+	}	
+	
+	public ConnectionImpl(XDIAddress child1, XDIAddress child2){
+		this.child1 = child1;
+		this.child2 = child2;		
 	}		
 	
 	public Boolean isApprovalRequired(){

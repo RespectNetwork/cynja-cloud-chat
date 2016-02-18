@@ -80,9 +80,9 @@ function logs() {
 	var child2 = $("#logsChild2").val().trim(); if (! child2) { alert("Please enter \"Child 2\""); return; }
 
 	$.ajax({
-	    url: '/1/logs',
+	    url: '/v2/logs',
 	    type: 'POST',
-	    data: 'parent=' + encodeURIComponent(parent) + '&' + 'parentSecretToken=' + encodeURIComponent(parentSecretToken) + '&' + 'child1=' + encodeURIComponent(child1) + '&' + 'child2=' + encodeURIComponent(child2),
+	    data: 'cloud=' + encodeURIComponent(parent) + '&' + 'cloudSecretToken=' + encodeURIComponent(parentSecretToken) + '&' + 'cloud1=' + encodeURIComponent(child1) + '&' + 'cloud2=' + encodeURIComponent(child2),
 	    success: function(data) { alert('success: ' + JSON.stringify(data)); },
 	    error: function(msg) { alert('error: ' + JSON.stringify(msg)); }
 	});
