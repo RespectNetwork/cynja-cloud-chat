@@ -8,20 +8,22 @@ import xdi2.client.XDIClient;
 import xdi2.client.http.XDIHttpClient;
 import xdi2.client.util.XDIClientUtil;
 import xdi2.core.Graph;
+import xdi2.core.constants.XDIDictionaryConstants;
 import xdi2.core.constants.XDILinkContractConstants;
 import xdi2.core.features.equivalence.Equivalence;
 import xdi2.core.features.linkcontracts.instance.GenericLinkContract;
 import xdi2.core.features.linkcontracts.instance.RootLinkContract;
-import xdi2.core.features.nodetypes.XdiAbstractMemberUnordered;
 import xdi2.core.features.nodetypes.XdiCommonRoot;
 import xdi2.core.features.nodetypes.XdiEntity;
 import xdi2.core.features.nodetypes.XdiEntityCollection;
-import xdi2.core.features.nodetypes.XdiEntityMember;
-import xdi2.core.features.nodetypes.XdiEntityMemberUnordered;
+import xdi2.core.features.nodetypes.XdiEntityInstance;
+import xdi2.core.features.nodetypes.XdiEntityInstanceUnordered;
+import xdi2.core.features.nodetypes.XdiInnerRoot;
 import xdi2.core.features.signatures.KeyPairSignature;
 import xdi2.core.impl.memory.MemoryGraphFactory;
 import xdi2.core.syntax.XDIAddress;
 import xdi2.core.syntax.XDIArc;
+import xdi2.core.syntax.XDIStatement;
 import xdi2.core.util.XDIAddressUtil;
 import xdi2.discovery.XDIDiscoveryResult;
 import xdi2.messaging.Message;
@@ -91,13 +93,23 @@ public class XdiConnectionService implements ConnectionService {
 									XDI_ADD_CHAT_DO_EC),
 									true);
 
-			XdiEntityMemberUnordered linkContract1XdiEntityMember = linkContract1XdiEntityCollection
-					.setXdiMemberUnordered(XdiAbstractMemberUnordered.createDigestXDIArc(
-							linkContract1.getContextNode().getXDIAddress().toString(),
-							XdiEntityCollection.class));
+			XdiEntityInstanceUnordered linkContract1XdiEntityMember = linkContract1XdiEntityCollection
+					.setXdiMemberUnordered(false, true, false, XDIArc.literalFromDigest(linkContract1.getContextNode().getXDIAddress().toString()));
 
 			Equivalence.setReferenceContextNode(linkContract1XdiEntityMember.getContextNode(), linkContract1.getContextNode());
+			
+			//START: To set cloud name as part of connection
+			XdiInnerRoot innerRootSet = XdiCommonRoot.findCommonRoot(tempGraph1).getInnerRoot(
+			        child1Discovery.getCloudNumber().getXDIAddress(), 
+			        child2Discovery.getCloudNumber().getXDIAddress(), 
+	                true);
 
+	        innerRootSet.getContextNode().setStatement(XDIStatement.fromComponents(
+	                child2Discovery.getCloudNumber().getXDIAddress(), 
+	                XDIDictionaryConstants.XDI_ADD_IS_REF, 
+	                child2));
+	        //END
+	        
 			// message
 
 			MessageEnvelope me = new MessageEnvelope();
@@ -195,14 +207,14 @@ public class XdiConnectionService implements ConnectionService {
 
 				if (linkContractXdiEntityCollection == null) continue;
 
-				for (XdiEntityMember xdiEntityMember : linkContractXdiEntityCollection.getXdiMembersUnordered()) {
+				for (XdiEntityInstance xdiEntityMember : linkContractXdiEntityCollection.getXdiMembersUnordered()) {
 
 					XdiEntity xdiEntity = xdiEntityMember.dereference();
 					GenericLinkContract linkContract = GenericLinkContract.fromXdiEntity(xdiEntity);
 
 					if (linkContract == null) continue;
 
-					connections.add(new XdiConnection(linkContract));
+					connections.add(new XdiConnection(linkContract, null, mr.getGraph()));
 				}
 			}
 
@@ -260,14 +272,14 @@ public class XdiConnectionService implements ConnectionService {
 
 			List<Connection> connections = new ArrayList<Connection> ();
 
-			for (XdiEntityMember xdiEntityMember : linkContractXdiEntityCollection.getXdiMembersUnordered()) {
+			for (XdiEntityInstance xdiEntityMember : linkContractXdiEntityCollection.getXdiMembersUnordered()) {
 
 				XdiEntity xdiEntity = xdiEntityMember.dereference();
 				GenericLinkContract linkContract = GenericLinkContract.fromXdiEntity(xdiEntity);
 
 				if (linkContract == null) continue;
 
-				connections.add(new XdiConnection(linkContract));
+				connections.add(new XdiConnection(linkContract, null, mr.getGraph()));
 			}
 
 			// done
@@ -394,7 +406,7 @@ public class XdiConnectionService implements ConnectionService {
 					XDILinkContractConstants.XDI_ADD_GET, 
 					linkContract1.getXdiEntity().getXDIAddress());
 
-			linkContract1.getXdiEntity().getXdiAttribute(XDI_ADD_APPROVED, true).getXdiValue(true).setLiteralBoolean(Boolean.TRUE);
+			linkContract1.getXdiEntity().getXdiAttribute(XDI_ADD_APPROVED, true).setLiteralDataBoolean(Boolean.TRUE);
 
 			// create a $ref equivalence link from a #chat[$do] collection member to the chat link contract
 			// this way, it becomes possible later to easily list all chat link contracts
@@ -406,10 +418,8 @@ public class XdiConnectionService implements ConnectionService {
 									XDI_ADD_CHAT_DO_EC),
 									true);
 
-			XdiEntityMemberUnordered linkContract1XdiEntityMember = linkContract1XdiEntityCollection
-					.setXdiMemberUnordered(XdiAbstractMemberUnordered.createDigestXDIArc(
-							linkContract1.getContextNode().getXDIAddress().toString(),
-							XdiEntityCollection.class));
+			XdiEntityInstanceUnordered linkContract1XdiEntityMember = linkContract1XdiEntityCollection
+					.setXdiMemberUnordered(false, true, false, XDIArc.literalFromDigest(linkContract1.getContextNode().getXDIAddress().toString()));
 
 			Equivalence.setReferenceContextNode(linkContract1XdiEntityMember.getContextNode(), linkContract1.getContextNode());
 
@@ -475,7 +485,7 @@ public class XdiConnectionService implements ConnectionService {
 					XDI_ADD_CHAT, 
 					true);
 
-			linkContract1.getXdiEntity().getXdiAttribute(XDI_ADD_BLOCKED, true).getXdiValue(true).setLiteralBoolean(Boolean.TRUE);
+			linkContract1.getXdiEntity().getXdiAttribute(XDI_ADD_BLOCKED, true).setLiteralDataBoolean(Boolean.TRUE);
 
 			// message
 
@@ -539,7 +549,7 @@ public class XdiConnectionService implements ConnectionService {
 					XDI_ADD_CHAT, 
 					true);
 
-			linkContract1.getXdiEntity().getXdiAttribute(XDI_ADD_BLOCKED, true).getXdiValue(true).setLiteralBoolean(Boolean.FALSE);
+			linkContract1.getXdiEntity().getXdiAttribute(XDI_ADD_BLOCKED, true).setLiteralDataBoolean(Boolean.FALSE);
 
 			// message
 
