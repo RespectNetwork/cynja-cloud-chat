@@ -15,6 +15,8 @@ import javax.persistence.Embeddable;
 @Embeddable
 public class ConnectingClouds implements Serializable{
 
+	private static final long serialVersionUID = 1L;
+
 	@Column(name = "requesting_cloud_number")
 	protected String requestingCloudNumber;
 		

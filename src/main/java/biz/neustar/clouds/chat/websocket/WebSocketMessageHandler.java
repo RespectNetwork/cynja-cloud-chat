@@ -39,6 +39,10 @@ public class WebSocketMessageHandler implements javax.websocket.MessageHandler.W
 
 		// read line
 
+		if(string == null || string.equals("")){
+			return;
+		}
+
 		BufferedReader bufferedReader = new BufferedReader(new StringReader(string));
 		String line;
 

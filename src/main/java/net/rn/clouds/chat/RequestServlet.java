@@ -10,8 +10,6 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import net.rn.clouds.chat.service.impl.ConnectionServiceImpl;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
