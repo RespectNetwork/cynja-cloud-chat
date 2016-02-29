@@ -3,27 +3,32 @@
  */
 package net.rn.clouds.chat.service.impl;
 
+import java.security.GeneralSecurityException;
 import java.security.PrivateKey;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
+import net.rn.clouds.chat.constants.ChatErrors;
 import net.rn.clouds.chat.constants.Deleted;
 import net.rn.clouds.chat.constants.Status;
 import net.rn.clouds.chat.dao.ConnectionRequestDAO;
 import net.rn.clouds.chat.dao.impl.ConnectionRequestDAOImpl;
+import net.rn.clouds.chat.exceptions.ChatSystemException;
+import net.rn.clouds.chat.exceptions.ChatValidationException;
 import net.rn.clouds.chat.model.ConnectingClouds;
 import net.rn.clouds.chat.model.ConnectionRequest;
 import net.rn.clouds.chat.util.EntityUtil;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import xdi2.client.exceptions.Xdi2ClientException;
 import xdi2.client.util.XDIClientUtil;
 import xdi2.core.syntax.CloudName;
 import xdi2.core.syntax.XDIAddress;
 import xdi2.discovery.XDIDiscoveryResult;
 import biz.neustar.clouds.chat.CynjaCloudChat;
 import biz.neustar.clouds.chat.InitFilter;
-import biz.neustar.clouds.chat.exceptions.ConnectionNotFoundException;
 import biz.neustar.clouds.chat.model.Connection;
 import biz.neustar.clouds.chat.model.Log;
 import biz.neustar.clouds.chat.service.ConnectionService;
@@ -35,6 +40,47 @@ import biz.neustar.clouds.chat.service.ConnectionService;
 public class ConnectionServiceImpl implements ConnectionService{
 	
 	private static final Logger LOGGER = LoggerFactory.getLogger(ConnectionServiceImpl.class);
+	
+	private XDIDiscoveryResult getXDIDiscovery(XDIAddress cloud){
+		
+		LOGGER.debug("Getting discovery of cloud1: {}", cloud.toString());
+		if(cloud != null){
+			try{
+				XDIDiscoveryResult cloudDiscovery = InitFilter.XDI_DISCOVERY_CLIENT.discoverFromRegistry(cloud, null);
+				if (cloudDiscovery == null|| cloudDiscovery.toString().equals("null (null)")){
+
+					LOGGER.debug("{} not found", cloud.toString());
+					throw new ChatValidationException(ChatErrors.CLOUD_NOT_FOUND.getErrorCode(), cloud.toString()+ChatErrors.CLOUD_NOT_FOUND.getErrorMessage());
+				}
+				return cloudDiscovery;
+			}catch(Xdi2ClientException clientExcption){
+				
+				throw new ChatValidationException(ChatErrors.CLOUD_NOT_FOUND.getErrorCode(), cloud.toString()+ChatErrors.CLOUD_NOT_FOUND.getErrorMessage());
+			}
+		}
+		return null;		
+	}
+	
+	private XDIDiscoveryResult authenticate(XDIAddress cloud, String cloudSecretToken){
+		
+		XDIDiscoveryResult cloudDiscovery = getXDIDiscovery(cloud);
+		
+		LOGGER.debug("Authenticating cloud: {}",cloud.toString());
+		try{
+			PrivateKey cloudPrivateKey = XDIClientUtil.retrieveSignaturePrivateKey(cloudDiscovery.getCloudNumber(), cloudDiscovery.getXdiEndpointUrl(), cloudSecretToken);	
+
+			if (cloudPrivateKey == null){
+
+				LOGGER.debug("{} private key not found", cloud.toString());
+				throw new ChatValidationException(ChatErrors.AUTHENTICATOION_FAILED.getErrorCode(), ChatErrors.AUTHENTICATOION_FAILED.getErrorMessage()+cloud.toString());
+			}
+		}
+		catch(Xdi2ClientException | GeneralSecurityException ex){		
+			throw new ChatValidationException(ChatErrors.AUTHENTICATOION_FAILED.getErrorCode(), ChatErrors.AUTHENTICATOION_FAILED.getErrorMessage()+cloud.toString());			
+		}
+				
+		return cloudDiscovery;
+	}
 
 	/* (non-Javadoc)
 	 * @see biz.neustar.clouds.chat.service.ConnectionService#requestConnection(xdi2.core.syntax.XDIAddress, java.lang.String, xdi2.core.syntax.XDIAddress)
@@ -44,30 +90,9 @@ public class ConnectionServiceImpl implements ConnectionService{
 		
 		LOGGER.debug("Enter requestConnection with requestingCloud: {}, acceptingCloud: {}", cloud1, cloud2);
 		try {
-			
-			LOGGER.debug("Getting discovery of cloud1: {}", cloud1.toString());  
-			XDIDiscoveryResult cloud1Discovery = InitFilter.XDI_DISCOVERY_CLIENT.discoverFromRegistry(cloud1, null);
-			if (cloud1Discovery == null || cloud1Discovery.toString().equals("null (null)")){
-				
-				LOGGER.debug("Cloud1: {} not found", cloud1.toString());
-				throw new NullPointerException("Cloud1 not found.");
-			}
-
-			LOGGER.debug("Getting discovery of cloud2: {}", cloud2.toString());
-			XDIDiscoveryResult cloud2Discovery = InitFilter.XDI_DISCOVERY_CLIENT.discoverFromRegistry(cloud2, null);
-			if (cloud2Discovery == null || cloud2Discovery.toString().equals("null (null)")){
-				
-				LOGGER.debug("Cloud2: {} not found", cloud2.toString());
-				throw new NullPointerException("Cloud2 not found.");						
-			}
-			
-			LOGGER.debug("Authenticating cloud1: {}",cloud1.toString());			
-			PrivateKey cloud1PrivateKey = XDIClientUtil.retrieveSignaturePrivateKey(cloud1Discovery.getCloudNumber(), cloud1Discovery.getXdiEndpointUrl(), cloud1SecretToken);
-			if (cloud1PrivateKey == null){
-				
-				LOGGER.debug("Cloud1: {} private key not found", cloud1.toString());
-				throw new NullPointerException("Cloud1 private key not found.");
-			}
+						  
+			XDIDiscoveryResult cloud1Discovery = authenticate(cloud1, cloud1SecretToken);
+			XDIDiscoveryResult cloud2Discovery = getXDIDiscovery(cloud2);
 						
 			String cloud1Number = cloud1Discovery.getCloudNumber().toString();			
 			String cloud2Number = cloud2Discovery.getCloudNumber().toString();		
@@ -76,54 +101,103 @@ public class ConnectionServiceImpl implements ConnectionService{
 			ConnectionRequestDAO connectionRequestDAO = new ConnectionRequestDAOImpl();
 			List<ConnectionRequest> connectionRequestList = connectionRequestDAO.getConnectionRequest(cloud1Number, cloud2Number);
 			
-			if(connectionRequestList != null && connectionRequestList.size() == 1 &&
-					((ConnectionRequest)connectionRequestList.get(0)).getConnectingClouds().getRequestingCloudNumber().equals(cloud1Number)){
-				
-				LOGGER.debug("Connection already requested between {} and {}", cloud1.toString(), cloud2.toString());
-				throw new Exception("Connection already exists.");
-			}
+			String cloudParent = EntityUtil.getGuardianCloudNumber(cloud1Number);			
+			
+			if(connectionRequestList != null && connectionRequestList.size() >= 1){
+				//Request already exists
+				for (Object obj : connectionRequestList) {
+
+					if(obj instanceof ConnectionRequest){
+
+						ConnectionRequest connectionRequest = (ConnectionRequest)obj;
+						String deleted = connectionRequest.getDeleted();
+						String status = connectionRequest.getStatus();
+						String requestingCloudNumber = connectionRequest.getConnectingClouds().getRequestingCloudNumber();
+						String acceptingCloudNumber = connectionRequest.getConnectingClouds().getAcceptingCloudNumber();
+												
+						if((requestingCloudNumber.equals(cloud1Number) && (deleted == null || 
+								(deleted != null && !deleted.equals(Deleted.DELETED_BY_REQUESTER.getDeleted())))) ||
+							(acceptingCloudNumber.equals(cloud1Number) && !status.equals(Status.NEW.getStatus()) && 
+								(deleted == null || (deleted != null && !deleted.equals(Deleted.DELETED_BY_ACCEPTOR.getDeleted()))))){
 							
-			String approvingCloudNumber = "";
-			String status = Status.CLOUD_APPROVAL_PENDING.getStatus();
-			
-			LOGGER.debug("Checking if requester is a dependent cloud");
-			String requesterCloudParent = EntityUtil.getGuardianCloudNumber(cloud1Number);
-			if(!requesterCloudParent.equals("")){
-				
-				approvingCloudNumber = requesterCloudParent;
-				status = Status.NEW.getStatus();
-			}else{
-				
-				LOGGER.debug("Checking if acceptor is a dependent cloud");
-				String acceptorCloudParent = EntityUtil.getGuardianCloudNumber(cloud2Number);
-				if(!acceptorCloudParent.equals("")){
-					approvingCloudNumber = acceptorCloudParent;
-				}else{
-					approvingCloudNumber = cloud2Number;
+								LOGGER.debug("Connection already requested between {} and {}", cloud1.toString(), cloud2.toString());
+								throw new ChatValidationException(ChatErrors.CONNECTION_ALREADY_EXISTS.getErrorCode(),ChatErrors.CONNECTION_ALREADY_EXISTS.getErrorMessage());
+						} 
+						
+						//Request has been deleted from one of the cloud
+						if(cloudParent.equals("")){
+							
+							if(acceptingCloudNumber.equals(cloud1Number) && status.equals(Status.NEW.getStatus())){
+								LOGGER.debug("Approved from cloud1 and renewed from cloud2 ");
+								connectionRequest.setStatus(Status.APPROVED.getStatus());
+								connectionRequest.setApprovingCloudNumber(null);
+								connectionRequest.setDeleted(Deleted.RENEWED_BY_REQUESTER.getDeleted());
+							}else{
+								LOGGER.debug("Revert the deletion ");
+								connectionRequest.setDeleted(null);
+							}
+															
+						}else{
+							
+							LOGGER.debug("Raise a request to parent to revert the deletion ");
+							if(requestingCloudNumber.equals(cloud1Number)){ 
+																
+								connectionRequest.setDeleted(Deleted.RENEWED_BY_REQUESTER.getDeleted());
+								
+							}else if(acceptingCloudNumber.equals(cloud1Number)){
+																
+								connectionRequest.setDeleted(Deleted.RENEWED_BY_ACCEPTOR.getDeleted());								
+							}														
+						}
+						connectionRequestDAO.updateRequest(connectionRequest);						
+					}
 				}
+			}else{
+				//Request does not exists, so raise a new request
+				String approvingCloudNumber = cloudParent;
+				String status = Status.CLOUD_APPROVAL_PENDING.getStatus();
+
+				LOGGER.debug("Checking if requester is a dependent cloud");			
+				if(!cloudParent.equals("")){
+
+					approvingCloudNumber = cloudParent;
+					status = Status.NEW.getStatus();
+				}else{
+
+					LOGGER.debug("Checking if acceptor is a dependent cloud");
+					String acceptorCloudParent = EntityUtil.getGuardianCloudNumber(cloud2Number);
+					if(!acceptorCloudParent.equals("")){
+						approvingCloudNumber = acceptorCloudParent;
+					}else{
+						approvingCloudNumber = cloud2Number;
+					}
+				}
+				LOGGER.debug("Approving cloud: {}, status: {}", approvingCloudNumber, status);
+
+				LOGGER.debug("Creating new connection request");
+				ConnectingClouds connectingClouds = new ConnectingClouds(
+						cloud1Number, cloud2Number);
+				ConnectionRequest connectionRequest = new ConnectionRequest();
+
+				connectionRequest.setConnectingClouds(connectingClouds);
+				connectionRequest.setRequestingConnectionName(cloud1.toString());
+				connectionRequest.setAcceptingConnectionName(cloud2.toString());
+				connectionRequest.setApprovingCloudNumber(approvingCloudNumber);
+				connectionRequest.setStatus(status);
+
+				LOGGER.debug("Saving new connection request");
+				connectionRequestDAO.requestConnection(connectionRequest);
 			}
-			LOGGER.debug("Approving cloud: {}, status: {}", approvingCloudNumber, status);
+		}catch (ChatValidationException chatException) {
+
+			LOGGER.error("Error while requesting connection: {}", chatException.getMessage());
+			throw chatException;
 			
-			LOGGER.debug("Creating new connection request");
-			ConnectingClouds connectingClouds = new ConnectingClouds(
-					cloud1Number, cloud2Number);
-			ConnectionRequest connectionRequest = new ConnectionRequest();
-
-			connectionRequest.setConnectingClouds(connectingClouds);
-			connectionRequest.setRequestingConnectionName(cloud1.toString());
-			connectionRequest.setAcceptingConnectionName(cloud2.toString());
-			connectionRequest.setApprovingCloudNumber(approvingCloudNumber);
-			connectionRequest.setStatus(status);
-
-			LOGGER.debug("Saving new connection request");
-			connectionRequestDAO.requestConnection(connectionRequest);
-		
-		} catch (Exception ex) {
+		}catch (Exception ex) {
 
 			LOGGER.error("Error while requesting connection: {}", ex.getMessage());
-			throw new ConnectionNotFoundException(ex.getMessage());
+			throw new ChatSystemException(ChatErrors.SYSTEM_ERROR.getErrorCode(),ChatErrors.SYSTEM_ERROR.getErrorMessage());
 		}
-		
 		LOGGER.debug("Exit requestConnection with cloud1: {}, cloud2: {}", cloud1, cloud2);				
 		return new ConnectionImpl(cloud1, cloud2);
 	}
@@ -135,38 +209,10 @@ public class ConnectionServiceImpl implements ConnectionService{
 		
 		LOGGER.debug("Enter approveConnection with approverCloud: {}, cloud1: {}, cloud2: {}", cloud, cloud1, cloud2);
 		try {
-
-			LOGGER.debug("Getting discovery of approvingCloud: {}", cloud.toString()); 
-			XDIDiscoveryResult approverDiscovery = InitFilter.XDI_DISCOVERY_CLIENT.discoverFromRegistry(cloud, null);
-			if (approverDiscovery == null || approverDiscovery.toString().equals("null (null)")){ 
-			
-				LOGGER.debug("Approving cloud: {} not found. ",cloud.toString());
-				throw new NullPointerException("Parent cloud not found.");
-			}
-
-			LOGGER.debug("Authenticating approvingCloud: {}",cloud.toString());
-			PrivateKey approverPrivateKey = XDIClientUtil.retrieveSignaturePrivateKey(approverDiscovery.getCloudNumber(), approverDiscovery.getXdiEndpointUrl(), cloudSecretToken);
-			if (approverPrivateKey == null){
-				
-				LOGGER.debug("Approver cloud: {} private key not found.", cloud.toString());
-				throw new NullPointerException("Approver cloud private key not found.");
-			}
-			
-			LOGGER.debug("Getting discovery of cloud1: {}", cloud1.toString());
-			XDIDiscoveryResult cloud1Discovery = InitFilter.XDI_DISCOVERY_CLIENT.discoverFromRegistry(cloud1, null);
-			if (cloud1Discovery == null || cloud1Discovery.toString().equals("null (null)")){
-				
-				LOGGER.debug("Cloud1 not found");
-				throw new NullPointerException("Cloud1 not found.");
-			}
-			
-			LOGGER.debug("Getting discovery of Cloud2: {}", cloud2.toString());
-			XDIDiscoveryResult cloud2Discovery = InitFilter.XDI_DISCOVERY_CLIENT.discoverFromRegistry(cloud2, null);
-			if (cloud2Discovery == null|| cloud2Discovery.toString().equals("null (null)")){
-				
-				LOGGER.debug("Cloud2 is not found");
-				throw new NullPointerException("cloud2 not found.");
-			}
+			 
+			XDIDiscoveryResult approverDiscovery = authenticate(cloud, cloudSecretToken);			
+			XDIDiscoveryResult cloud1Discovery = getXDIDiscovery(cloud1);			
+			XDIDiscoveryResult cloud2Discovery = getXDIDiscovery(cloud2);			
 			
 			String cloudNumber = approverDiscovery.getCloudNumber().toString();
 			String cloud1CloudNumber = cloud1Discovery.getCloudNumber().toString();
@@ -176,7 +222,7 @@ public class ConnectionServiceImpl implements ConnectionService{
 			LOGGER.debug("Checking if cloud1: {} is a self or dependent cloud of cloud: {}",cloud1.toString(), cloud.toString());
 			if(!cloudNumber.equals(cloud1CloudNumber) && !cloudNumber.equals(guardianCloudNumber)){
 				LOGGER.debug("Invalid cloud1 provided");
-				throw new Exception("Incorrect cloud1 provided. ");
+				throw new ChatValidationException(ChatErrors.INVALID_CLOUD1_PROVIDED.getErrorCode(),ChatErrors.INVALID_CLOUD1_PROVIDED.getErrorMessage());
 			}							
 			
 			LOGGER.debug("Getting connection request");
@@ -186,7 +232,7 @@ public class ConnectionServiceImpl implements ConnectionService{
 			if(connectionRequestList == null || connectionRequestList.size()==0){
 				
 				LOGGER.debug("Connection request not found");
-				throw new NullPointerException("Connection request not found.");
+				throw new ChatValidationException(ChatErrors.CONNECTION_REQUEST_NOT_FOUND.getErrorCode(), ChatErrors.CONNECTION_REQUEST_NOT_FOUND.getErrorMessage());
 			}
 				
 			for (Object obj : connectionRequestList) {
@@ -195,62 +241,94 @@ public class ConnectionServiceImpl implements ConnectionService{
 
 					ConnectionRequest connectionRequest = (ConnectionRequest)obj;
 					
-					String status = connectionRequest.getStatus();					
-					if(status.equals(Status.APPROVED.getStatus())){
-						LOGGER.debug("connection request is already approved");
-						throw new Exception("This connection is already approved.");
-					}
-					
-					if(!cloudNumber.equals(connectionRequest.getApprovingCloudNumber())){
-						LOGGER.debug("Cloud: {} is not authorized approver.", cloud.toString());
-						throw new Exception("You are not authorized to approve the connection.");
-					}
-					
+					String requestingCloudNumber = connectionRequest.getConnectingClouds().getRequestingCloudNumber().toString();
 					String acceptingCloudNumber = connectionRequest.getConnectingClouds().getAcceptingCloudNumber().toString();
-					String acceptingCloudParent = EntityUtil.getGuardianCloudNumber(acceptingCloudNumber);
-
+					
+										
+					String deleted = connectionRequest.getDeleted();
+					String status = connectionRequest.getStatus();
+					String newStatus = status;
 					String newApprover = null;
-					String newStatus = null;																		
-
-					if(!acceptingCloudParent.equals("")){
-																		
-						if(status.equals(Status.NEW.getStatus())){
-
-							newStatus = Status.CLOUD_APPROVAL_PENDING.getStatus();
-							newApprover =  acceptingCloudParent;
-
-						}else if(status.equals(Status.CLOUD_APPROVAL_PENDING.getStatus())){
-
-							newStatus = Status.CHILD_APPROVAL_PENDING.getStatus();
-							newApprover = acceptingCloudNumber;
-
-						}else if(status.equals(Status.CHILD_APPROVAL_PENDING.getStatus())){
-
-							newStatus = Status.APPROVED.getStatus();
-							newApprover = null;
-						}							
+										
+					if(deleted != null && !guardianCloudNumber.equals("") && 
+						((cloud1CloudNumber.equals(requestingCloudNumber) && deleted.equals(Deleted.RENEWED_BY_REQUESTER.getDeleted())) ||
+						cloud1CloudNumber.equals(acceptingCloudNumber) && deleted.equals(Deleted.RENEWED_BY_ACCEPTOR.getDeleted()))){
+						
+							if(status.equals(Status.NEW.getStatus())){
+								
+								connectionRequest.setStatus(Status.APPROVED.getStatus());
+								connectionRequest.setApprovingCloudNumber(null);
+								connectionRequest.setDeleted(Deleted.RENEWED_BY_REQUESTER.getDeleted());
+								
+							}else{
+								connectionRequest.setDeleted(null);
+							}
+												
 					}else{
-						if(status.equals(Status.NEW.getStatus())){
-							newStatus = Status.CLOUD_APPROVAL_PENDING.getStatus();
-							newApprover = acceptingCloudNumber;
+					
+						if(status.equals(Status.APPROVED.getStatus()) || status.equals(Status.BLOCKED.getStatus()) ||
+								status.equals(Status.BLOCKED_BY_ACCEPTOR.getStatus()) || status.equals(Status.BLOCKED_BY_REQUESTER.getStatus())){
+							LOGGER.debug("connection request is already approved");
+							throw new ChatValidationException(ChatErrors.ACTION_ALREADY_PERFORMED.getErrorCode(),ChatErrors.ACTION_ALREADY_PERFORMED.getErrorMessage());
 						}
-						if(status.equals(Status.CLOUD_APPROVAL_PENDING.getStatus())){
-
+						
+						if(!cloudNumber.equals(connectionRequest.getApprovingCloudNumber())){
+							LOGGER.debug("Cloud: {} is not authorized approver.", cloud.toString());
+							throw new ChatValidationException(ChatErrors.UNAUTHORIZED_ACTION.getErrorCode(),ChatErrors.UNAUTHORIZED_ACTION.getErrorMessage());
+						}											
+						
+						String acceptingCloudParent = EntityUtil.getGuardianCloudNumber(acceptingCloudNumber);
+						
+						if(deleted != null && deleted.equals(Deleted.RENEWED_BY_ACCEPTOR.getDeleted())){
+							
 							newStatus = Status.APPROVED.getStatus();
 							newApprover = null;
+							
+						}else if(!acceptingCloudParent.equals("")){
+
+							if(status.equals(Status.NEW.getStatus())){
+
+								newStatus = Status.CLOUD_APPROVAL_PENDING.getStatus();
+								newApprover =  acceptingCloudParent;
+
+							}else if(status.equals(Status.CLOUD_APPROVAL_PENDING.getStatus())){
+
+								newStatus = Status.CHILD_APPROVAL_PENDING.getStatus();
+								newApprover = acceptingCloudNumber;
+
+							}else if(status.equals(Status.CHILD_APPROVAL_PENDING.getStatus())){
+
+								newStatus = Status.APPROVED.getStatus();
+								newApprover = null;
+							}							
+						}else{
+							if(status.equals(Status.NEW.getStatus())){
+								newStatus = Status.CLOUD_APPROVAL_PENDING.getStatus();
+								newApprover = acceptingCloudNumber;
+							}
+							if(status.equals(Status.CLOUD_APPROVAL_PENDING.getStatus())){
+
+								newStatus = Status.APPROVED.getStatus();
+								newApprover = null;
+							}
 						}
+						connectionRequest.setApprovingCloudNumber(newApprover);
+						connectionRequest.setStatus(newStatus);
 					}
 
-					LOGGER.debug("Upating connection request");
-					connectionRequest.setApprovingCloudNumber(newApprover);
-					connectionRequest.setStatus(newStatus);							
+					LOGGER.debug("Upating connection request");										
 					connectionRequestDAO.updateRequest(connectionRequest);					
 				}
 			}													
+		}catch (ChatValidationException chatException) {
+
+			LOGGER.error("Error while approving connection: {}", chatException.getMessage());
+			throw chatException;
+			
 		}catch (Exception ex) {
 
 			LOGGER.error("Error while approving connection: {}", ex.getMessage());
-			throw new ConnectionNotFoundException(ex.getMessage());
+			throw new ChatSystemException(ChatErrors.SYSTEM_ERROR.getErrorCode(),ChatErrors.SYSTEM_ERROR.getErrorMessage());
 		}
 		
 		LOGGER.debug("Exit approveConnection with cloud: {}, cloud1: {}, cloud2: {}", cloud, cloud1, cloud2);		
@@ -265,22 +343,8 @@ public class ConnectionServiceImpl implements ConnectionService{
 		LOGGER.debug("Enter viewConnectionsAsParent with parent: {} ", parent);		
 		ConnectionImpl[] connection = null;		
 		try {
-
-			LOGGER.debug("Getting discovery of parent cloud: {}", parent.toString());
-			XDIDiscoveryResult parentDiscovery = InitFilter.XDI_DISCOVERY_CLIENT.discoverFromRegistry(parent, null);
-			if (parentDiscovery == null|| parentDiscovery.toString().equals("null (null)")){
-				
-				LOGGER.debug("Parent cloud not found");
-				throw new NullPointerException("Parent not found.");
-			}
-
-			LOGGER.debug("Authenticating parent cloud: {}",parent.toString());
-			PrivateKey parentPrivateKey = XDIClientUtil.retrieveSignaturePrivateKey(parentDiscovery.getCloudNumber(), parentDiscovery.getXdiEndpointUrl(), parentSecretToken);
-			if (parentPrivateKey == null){
-				
-				LOGGER.debug("Parent private key not found");
-				throw new NullPointerException("Parent parent key not found.");
-			}
+			
+			XDIDiscoveryResult parentDiscovery = authenticate(parent, parentSecretToken);
 				
 			LOGGER.debug("Getting all children of parent cloud: {}",parent.toString());
 			XDIAddress[] children = CynjaCloudChat.parentChildService.getChildren(parent, parentSecretToken);			
@@ -318,15 +382,23 @@ public class ConnectionServiceImpl implements ConnectionService{
 					CloudName connectionName;
 					boolean isBlocked1 = false;
 					boolean isBlocked2 = false;
+					boolean isApproved1 = false;
+					boolean isApproved2 = false;
 					
 					String deleted = connectionRequest.getDeleted();
 					String status = connectionRequest.getStatus();
+					boolean isApprovalRequired = false;														
+					
 					
 					if (collection.contains(connectionRequest.getConnectingClouds().getRequestingCloudNumber().toString())){
 												
 						if(deleted != null && deleted.equals(Deleted.DELETED_BY_REQUESTER.getDeleted())){
 							LOGGER.debug("Do not add connection request to view list if connection request is deleted by requester");
 							continue;
+						}
+						
+						if(deleted != null && deleted.equals(Deleted.RENEWED_BY_REQUESTER.getDeleted())){
+							isApprovalRequired = true;
 						}
 						child1 = XDIAddress.create(connectionRequest.getConnectingClouds().getRequestingCloudNumber());
 						child2 = XDIAddress.create(connectionRequest.getConnectingClouds().getAcceptingCloudNumber());												
@@ -335,9 +407,11 @@ public class ConnectionServiceImpl implements ConnectionService{
 						LOGGER.debug("Checking ig connection is blocked by requester");
 						if(status.equals(Status.BLOCKED_BY_REQUESTER.getStatus())){
 							isBlocked1 = true;
+							isApproved2 = true;
 							
 						}else if(status.equals(Status.BLOCKED_BY_ACCEPTOR.getStatus())){
 							isBlocked2 = true;
+							isApproved1 = true;
 						}
 					}else{
 						
@@ -346,36 +420,48 @@ public class ConnectionServiceImpl implements ConnectionService{
 							continue;
 						}
 						
-						if(status.equals(Status.NEW.getStatus())){
+						if(status.equals(Status.NEW.getStatus()) && deleted == null){
 							LOGGER.debug("Do not add connection request to view list if connection request has not been approved by requester guardian");
 							continue;
 						}
+						
+						if(deleted != null && deleted.equals(Deleted.RENEWED_BY_ACCEPTOR.getDeleted())){
+							isApprovalRequired = true;
+						}
+						
 						child1 = XDIAddress.create(connectionRequest.getConnectingClouds().getAcceptingCloudNumber());
 						child2 = XDIAddress.create(connectionRequest.getConnectingClouds().getRequestingCloudNumber());
 						connectionName = CloudName.create(connectionRequest.getRequestingConnectionName());
 						
 						LOGGER.debug("Checking if connection is blocked by acceptor"); 
 						if(status.equals(Status.BLOCKED_BY_ACCEPTOR.getStatus())){
+							
 							isBlocked1 = true;
+							isApproved2 = true;
+							
 						}if(status.equals(Status.BLOCKED_BY_REQUESTER.getStatus())){
+							
 							isBlocked2 = true;
+							isApproved1 = true;
 						}
 					}
-					
-					boolean isApproved1 = false;
-					boolean isApproved2 = false;
-					boolean isApprovalRequired = false;
-					
+						
 					if(status.equals(Status.APPROVED.getStatus())){
-						isApproved1 = true;	
-						isApproved2 = true;
+						if(deleted != null && !deleted.equals(Deleted.RENEWED_BY_REQUESTER.getDeleted())){
+							
+							isApproved1 = true;
+							
+						}else if(deleted != null && !deleted.equals(Deleted.RENEWED_BY_REQUESTER.getDeleted())){
+							
+							isApproved2 = true;
+						}
 					}
-										
+									
 					if(connectionRequest.getApprovingCloudNumber() != null && 
 							connectionRequest.getApprovingCloudNumber().equals(parentDiscovery.getCloudNumber().toString())){
 						isApprovalRequired = true;
 					}		
-
+					
 					LOGGER.debug("Adding connection request to view list");
 					
 					connection[clounter++] = new ConnectionImpl(child1, child2, isApprovalRequired, isApproved1, 
@@ -383,10 +469,14 @@ public class ConnectionServiceImpl implements ConnectionService{
 				}					
 			}				
 			
-		} catch (Exception ex) {
+		}catch (ChatValidationException chatException) {
+
+			LOGGER.error("Error while viewing connection as parent: {}", chatException.getMessage());
+			throw chatException;
+		}catch (Exception ex) {
 
 			LOGGER.error("Error while viewing connection as parent: {}", ex.getMessage());
-			throw new ConnectionNotFoundException(ex.getMessage());
+			throw new ChatSystemException(ChatErrors.SYSTEM_ERROR.getErrorCode(),ChatErrors.SYSTEM_ERROR.getErrorMessage());
 		}
 		
 		LOGGER.debug("Exit viewConnectionsAsParent with parent: {} ", parent);
@@ -403,22 +493,8 @@ public class ConnectionServiceImpl implements ConnectionService{
 		ConnectionImpl[] connection = null;		
 
 		try {
-
-			LOGGER.debug("Getting discovery of cloud: {}", cloud.toString());
-			XDIDiscoveryResult cloudDiscovery = InitFilter.XDI_DISCOVERY_CLIENT.discoverFromRegistry(cloud, null);
-			if (cloudDiscovery == null|| cloudDiscovery.toString().equals("null (null)")){
-				
-				LOGGER.debug("Cloud: {} not found", cloud.toString());
-				throw new NullPointerException("Cloud not found.");
-			}
-
-			LOGGER.debug("Authenticating cloud: {}",cloud.toString());
-			PrivateKey cloudPrivateKey = XDIClientUtil.retrieveSignaturePrivateKey(cloudDiscovery.getCloudNumber(), cloudDiscovery.getXdiEndpointUrl(), cloudSecretToken);
-			if (cloudPrivateKey == null){
-				
-				LOGGER.debug("Cloud private key not found");
-				throw new NullPointerException("Cloud private key not found.");
-			}
+			
+			XDIDiscoveryResult cloudDiscovery = authenticate(cloud, cloudSecretToken);
 			
 			String cloudNumber = cloudDiscovery.getCloudNumber().toString();						
 			
@@ -431,7 +507,7 @@ public class ConnectionServiceImpl implements ConnectionService{
 			
 			if(connectionRequestList == null || connectionRequestList.size()==0){
 				
-				LOGGER.debug("No connection request not found for cloud: {}", cloud.toString());
+				LOGGER.debug("No connection request found for cloud: {}", cloud.toString());
 				return new ConnectionImpl[0];
 			}
 				
@@ -449,6 +525,8 @@ public class ConnectionServiceImpl implements ConnectionService{
 					CloudName connectionName;
 					boolean isBlocked1 = false;
 					boolean isBlocked2 = false;
+					boolean isApproved1 = false;
+					boolean isApproved2 = false;
 					
 					String deleted = connectionRequest.getDeleted();
 					String status = connectionRequest.getStatus();
@@ -466,9 +544,14 @@ public class ConnectionServiceImpl implements ConnectionService{
 						
 						LOGGER.debug("Checking if connection request has been blocked by cloud: {}",cloud.toString());
 						if(status.equals(Status.BLOCKED_BY_REQUESTER.getStatus())){
+							
 							isBlocked1 = true;
+							isApproved2 = true;
+							
 						}else if(status.equals(Status.BLOCKED_BY_ACCEPTOR.getStatus())){
+							
 							isBlocked2 = true;
+							isApproved1 = true;
 						}
 						
 					}else{
@@ -488,21 +571,23 @@ public class ConnectionServiceImpl implements ConnectionService{
 						
 						LOGGER.debug("Checking if connection request has been blocked by cloud: {}",cloud.toString());
 						if(status.equals(Status.BLOCKED_BY_ACCEPTOR.getStatus())){
+							
 							isBlocked1 = true;
+							isApproved2 = true;
+							
 						}else if(status.equals(Status.BLOCKED_BY_REQUESTER.getStatus())){
+							
 							isBlocked2 = true;
+							isApproved1 = true;
 						}
 					}
-					
-					boolean isApproved1 = false;
-					boolean isApproved2 = false;
-					boolean isApprovalRequired = false;
-					
+																				
 					if(status.equals(Status.APPROVED.getStatus())){
 						isApproved1 = true;
 						isApproved2 = true;
 					}
-										
+							
+					boolean isApprovalRequired = false;
 					if(connectionRequest.getApprovingCloudNumber() != null &&
 							connectionRequest.getApprovingCloudNumber().equals(cloudNumber)){
 						isApprovalRequired = true;
@@ -512,13 +597,17 @@ public class ConnectionServiceImpl implements ConnectionService{
 							isApproved1, isApproved2, isBlocked1, isBlocked2, connectionName);
 				}
 			}					
+		}catch (ChatValidationException chatException) {
+
+			LOGGER.error("Error while viewing connection as cloud: {}", chatException.getMessage());
+			throw chatException;
 		}catch (Exception ex) {
-			
-			LOGGER.error("Error while viewing connection: {}", ex.getMessage());
-			throw new ConnectionNotFoundException(ex.getMessage());
+
+			LOGGER.error("Error while viewing connection as cloud: {}", ex.getMessage());
+			throw new ChatSystemException(ChatErrors.SYSTEM_ERROR.getErrorCode(),ChatErrors.SYSTEM_ERROR.getErrorMessage());
 		}
 		
-		LOGGER.debug("Exit viewConnectionsAsChild with cloud: {}", cloud);
+		LOGGER.debug("Exit viewConnectionsAsCloud with cloud: {}", cloud);
 		return connection;
 	}
 	
@@ -529,57 +618,31 @@ public class ConnectionServiceImpl implements ConnectionService{
 
 		LOGGER.debug("Enter logsConnection with cloud: {} for cloud1: {}, cloud2: {}", cloud, cloud1, cloud2);
 		try {
-
-			LOGGER.debug("Getting discovery of cloud: {}", cloud.toString());
-			XDIDiscoveryResult cloudDiscovery = InitFilter.XDI_DISCOVERY_CLIENT.discoverFromRegistry(cloud, null);
-			if (cloudDiscovery == null|| cloudDiscovery.toString().equals("null (null)")){
-				
-				LOGGER.debug("Cloud: {} not found", cloud.toString());
-				throw new NullPointerException("Cloud not found.");
-			}
 			
-			LOGGER.debug("Getting discovery of cloud1: {}", cloud1.toString());
-			XDIDiscoveryResult cloud1Discovery = InitFilter.XDI_DISCOVERY_CLIENT.discoverFromRegistry(cloud1, null);
-			if (cloud1Discovery == null|| cloud1Discovery.toString().equals("null (null)")){
-				
-				LOGGER.debug("Cloud1: {} not found", cloud1.toString());
-				throw new NullPointerException("Cloud1 not found.");
-			}
+			XDIDiscoveryResult cloudDiscovery = authenticate(cloud, cloudSecretToken);
+			XDIDiscoveryResult cloud1Discovery = getXDIDiscovery(cloud1);			
 			
-			LOGGER.debug("Getting discovery of cloud2: {}", cloud2.toString());
-			XDIDiscoveryResult cloud2Discovery = InitFilter.XDI_DISCOVERY_CLIENT.discoverFromRegistry(cloud2, null);
-			if (cloud2Discovery == null|| cloud2Discovery.toString().equals("null (null)")){
-				
-				LOGGER.debug("Cloud2: {} not found", cloud2.toString());
-				throw new NullPointerException("Cloud2 not found.");
-			}
-
-			LOGGER.debug("Authenticating cloud: {}",cloud.toString());
-			PrivateKey cloudPrivateKey = XDIClientUtil.retrieveSignaturePrivateKey(cloudDiscovery.getCloudNumber(), cloudDiscovery.getXdiEndpointUrl(), cloudSecretToken);
-			if (cloudPrivateKey == null){
-				
-				LOGGER.debug("Cloud private key not found");
-				throw new NullPointerException("Cloud private key not found.");
-			}
-		
 			String cloudNumber = cloudDiscovery.getCloudNumber().toString();
 			String cloud1CloudNumber = cloud1Discovery.getCloudNumber().toString();
 			String cloud1Guardian = EntityUtil.getGuardianCloudNumber(cloud1CloudNumber);
 			
 			if(!cloudNumber.equals(cloud1CloudNumber) && !cloudNumber.equals(cloud1Guardian)){
 				LOGGER.debug("Invalid cloud1 provided");
-				throw new Exception("Invalid cloud1 provided");
+				throw new ChatValidationException(ChatErrors.INVALID_CLOUD1_PROVIDED.getErrorCode(),ChatErrors.INVALID_CLOUD1_PROVIDED.getErrorMessage());
 			}
 			
 			LOGGER.debug("Getting logs for cloud1: {}, cloud2: {}", cloud1.toString(), cloud2.toString());
 			return CynjaCloudChat.logService.getLogs(new ConnectionImpl(cloud1, cloud2));
 		
+		}catch (ChatValidationException chatException) {
+
+			LOGGER.error("Error while viewing connection logs");
+			throw chatException;
 		}catch (Exception ex) {
 
-			LOGGER.error("Error while viewing connection logs: {}",ex.getMessage());
-			throw new ConnectionNotFoundException(ex.getMessage());
-		}
-				
+			LOGGER.error("Error while viewing connection logs");
+			throw new ChatSystemException(ChatErrors.SYSTEM_ERROR.getErrorCode(),ChatErrors.SYSTEM_ERROR.getErrorMessage());
+		}				
 	}
 	
 	/* (non-Javadoc)
@@ -589,41 +652,10 @@ public class ConnectionServiceImpl implements ConnectionService{
 		
 		LOGGER.debug("Enter blockConnection with cloud: {}, cloud1: {}, cloud2: {}", cloud, cloud1, cloud2);
 		try {
-
-			LOGGER.debug("Getting discovery of cloud: {}", cloud.toString());
-			XDIDiscoveryResult cloudDiscovery = InitFilter.XDI_DISCOVERY_CLIENT.discoverFromRegistry(cloud, null);
-			if (cloudDiscovery == null|| cloudDiscovery.toString().equals("null (null)")){
-				
-				LOGGER.debug("Cloud: {} not found", cloud.toString());
-				throw new NullPointerException("Cloud not found.");
-			}
-
-			LOGGER.debug("Authenticating cloud: {}",cloud.toString());
-			PrivateKey cloudPrivateKey = XDIClientUtil.retrieveSignaturePrivateKey(cloudDiscovery.getCloudNumber(), cloudDiscovery.getXdiEndpointUrl(), cloudSecretToken);
 			
-			if (cloudPrivateKey == null){
-				
-				LOGGER.debug("Cloud private key not found.");
-				throw new NullPointerException("Cloud private key not found.");
-			}
-			
-			LOGGER.debug("Getting discovery of cloud1: {}", cloud1.toString());
-			XDIDiscoveryResult cloud1Discovery = InitFilter.XDI_DISCOVERY_CLIENT.discoverFromRegistry(cloud1, null);
-			
-			if (cloud1Discovery == null|| cloud1Discovery.toString().equals("null (null)")){
-				
-				LOGGER.debug("Cloud1 not found.");
-				throw new NullPointerException("Cloud1 not found.");
-			}
-			
-			LOGGER.debug("Getting discovery of cloud2: {}", cloud2.toString());
-			XDIDiscoveryResult cloud2Discovery = InitFilter.XDI_DISCOVERY_CLIENT.discoverFromRegistry(cloud2, null);
-			
-			if (cloud2Discovery == null|| cloud2Discovery.toString().equals("null (null)")){
-				
-				LOGGER.debug("Cloud2 not found.");
-				throw new NullPointerException("Cloud2 not found.");
-			}
+			XDIDiscoveryResult cloudDiscovery = authenticate(cloud, cloudSecretToken);
+			XDIDiscoveryResult cloud1Discovery = getXDIDiscovery(cloud1)
+;			XDIDiscoveryResult cloud2Discovery = getXDIDiscovery(cloud2);
 			
 			String cloudNumber = cloudDiscovery.getCloudNumber().toString();
 			String cloud1CloudNumber = cloud1Discovery.getCloudNumber().toString();
@@ -633,7 +665,7 @@ public class ConnectionServiceImpl implements ConnectionService{
 			LOGGER.debug("Checking if cloud1: {} is a self or dependent cloud of cloud: {}",cloud1.toString(), cloud.toString());
 			if(!cloudNumber.equals(cloud1CloudNumber) && !cloudNumber.equals(guardianCloudNumber)){
 				LOGGER.debug("Invalid cloud1 provided");
-				throw new Exception("Incorrect cloud1 provided. ");
+				throw new ChatValidationException(ChatErrors.INVALID_CLOUD1_PROVIDED.getErrorCode(),ChatErrors.INVALID_CLOUD1_PROVIDED.getErrorMessage());
 			}						
 			
 			LOGGER.debug("Getting connection request between cloud1: {}, cloud2: {}", cloud1.toString(), cloud2.toString());
@@ -642,8 +674,8 @@ public class ConnectionServiceImpl implements ConnectionService{
 						
 			if(connectionRequestList == null || connectionRequestList.size()==0){
 				
-				LOGGER.debug("Conenction request not found.");
-				throw new NullPointerException("Connection request not found.");
+				LOGGER.debug("Connection request not found.");
+				throw new ChatValidationException(ChatErrors.CONNECTION_REQUEST_NOT_FOUND.getErrorCode(), ChatErrors.CONNECTION_REQUEST_NOT_FOUND.getErrorMessage());
 			}
 				
 			for (Object obj : connectionRequestList) {
@@ -663,7 +695,12 @@ public class ConnectionServiceImpl implements ConnectionService{
 						if(deleted != null && deleted.equals(Deleted.DELETED_BY_REQUESTER.getDeleted())){
 							
 							LOGGER.debug("Conenction request not found.");
-							throw new Exception("Connection request not found.");
+							throw new ChatValidationException(ChatErrors.CONNECTION_REQUEST_NOT_FOUND.getErrorCode(), ChatErrors.CONNECTION_REQUEST_NOT_FOUND.getErrorMessage());
+							
+						}else if(deleted != null && deleted.equals(Deleted.RENEWED_BY_REQUESTER.getDeleted())){
+							
+							LOGGER.debug("Connection can not be blocked until approved.");
+							throw new ChatValidationException(ChatErrors.APPROVE_THE_CONNECTION_FIRST.getErrorCode(),ChatErrors.APPROVE_THE_CONNECTION_FIRST.getErrorMessage());
 						}
 						if(status.equals(Status.APPROVED.getStatus())){
 							
@@ -676,20 +713,25 @@ public class ConnectionServiceImpl implements ConnectionService{
 						}else if(status.equals(Status.BLOCKED_BY_REQUESTER.getStatus())){
 							
 							LOGGER.debug("Connection is already blocked");
-							throw new Exception("Connection is already blocked");
+							throw new ChatValidationException(ChatErrors.ACTION_ALREADY_PERFORMED.getErrorCode(),ChatErrors.ACTION_ALREADY_PERFORMED.getErrorMessage());
 						}else{
 							
 							LOGGER.debug("Connection can not be blocked until approved.");
-							throw new Exception("Connection can not be blocked until approved.");
+							throw new ChatValidationException(ChatErrors.APPROVE_THE_CONNECTION_FIRST.getErrorCode(),ChatErrors.APPROVE_THE_CONNECTION_FIRST.getErrorMessage());
 						}
 
 					}else if(acceptingCloudNumber.equals(cloudNumber) || acceptingCloudNumber.equals(cloud1CloudNumber)){
 						
 						if(deleted != null && deleted.equals(Deleted.DELETED_BY_ACCEPTOR.getDeleted())){
+							
 							LOGGER.debug("Conenction request not found.");
-							throw new Exception("Connection request not found.");
-						}
-						
+							throw new ChatValidationException(ChatErrors.CONNECTION_REQUEST_NOT_FOUND.getErrorCode(), ChatErrors.CONNECTION_REQUEST_NOT_FOUND.getErrorMessage());
+							
+						}else if(deleted != null && deleted.equals(Deleted.RENEWED_BY_ACCEPTOR.getDeleted())){
+							
+							LOGGER.debug("Connection can not be blocked until approved.");
+							throw new ChatValidationException(ChatErrors.APPROVE_THE_CONNECTION_FIRST.getErrorCode(), ChatErrors.APPROVE_THE_CONNECTION_FIRST.getErrorMessage());
+						}						
 						if(status.equals(Status.APPROVED.getStatus())){
 							
 							newStatus = Status.BLOCKED_BY_ACCEPTOR.getStatus();
@@ -701,11 +743,11 @@ public class ConnectionServiceImpl implements ConnectionService{
 						}else if(status.equals(Status.BLOCKED_BY_ACCEPTOR.getStatus())){
 							
 							LOGGER.debug("Connection is already blocked");
-							throw new Exception("Connection is already blocked");
+							throw new ChatValidationException(ChatErrors.ACTION_ALREADY_PERFORMED.getErrorCode(),ChatErrors.ACTION_ALREADY_PERFORMED.getErrorMessage());
 						}else{
 							
 							LOGGER.debug("Connection can not be blocked until approved.");
-							throw new Exception("Connection can not be blocked until approved.");
+							throw new ChatValidationException(ChatErrors.APPROVE_THE_CONNECTION_FIRST.getErrorCode(), ChatErrors.APPROVE_THE_CONNECTION_FIRST.getErrorMessage());
 						}
 					}
 					
@@ -718,10 +760,14 @@ public class ConnectionServiceImpl implements ConnectionService{
 				}
 			}			
 			
-		}catch(Exception ex){
-			
+		}catch (ChatValidationException chatException) {
+
+			LOGGER.error("Error while blocking connection: {}",chatException.getMessage());
+			throw chatException;
+		}catch (Exception ex) {
+
 			LOGGER.error("Error while blocking connection: {}",ex.getMessage());
-			throw new ConnectionNotFoundException(ex.getMessage());
+			throw new ChatSystemException(ChatErrors.SYSTEM_ERROR.getErrorCode(),ChatErrors.SYSTEM_ERROR.getErrorMessage());
 		}
 		
 		LOGGER.debug("Exit blockConnection with cloud: {}, cloud1: {}, cloud2: {}", cloud, cloud1, cloud2);		
@@ -734,40 +780,11 @@ public class ConnectionServiceImpl implements ConnectionService{
 	public Connection unblockConnection(XDIAddress cloud, String cloudSecretToken, XDIAddress cloud1, XDIAddress cloud2){
 		
 		LOGGER.debug("Enter unblockConnection with cloud: {}, cloud1: {}, cloud2: {}", cloud, cloud1, cloud2);
-		try {
-
-			LOGGER.debug("Getting discovery of cloud: {}", cloud.toString());
+		try {			
 			
-			XDIDiscoveryResult cloudDiscovery = InitFilter.XDI_DISCOVERY_CLIENT.discoverFromRegistry(cloud, null);
-			if (cloudDiscovery == null || cloudDiscovery.toString().equals("null (null)")){
-				
-				LOGGER.debug("Cloud not found.");
-				throw new NullPointerException("Cloud not found.");
-			}
-
-			LOGGER.debug("Authenticating cloud: {}",cloud.toString());
-			PrivateKey cloudPrivateKey = XDIClientUtil.retrieveSignaturePrivateKey(cloudDiscovery.getCloudNumber(), cloudDiscovery.getXdiEndpointUrl(), cloudSecretToken);
-			if (cloudPrivateKey == null){
-				
-				LOGGER.debug("Cloud private key not found.");
-				throw new NullPointerException("Cloud private key not found.");
-			}
-			
-			LOGGER.debug("Getting discovery of cloud1: {}", cloud1.toString());
-			XDIDiscoveryResult cloud1Discovery = InitFilter.XDI_DISCOVERY_CLIENT.discoverFromRegistry(cloud1, null);
-			if (cloud1Discovery == null || cloud1Discovery.toString().equals("null (null)")){
-				
-				LOGGER.debug("Cloud1 not found.");
-				throw new NullPointerException("Cloud1 not found.");
-			}
-			
-			LOGGER.debug("Getting discovery of cloud2: {}", cloud2.toString());
-			XDIDiscoveryResult cloud2Discovery = InitFilter.XDI_DISCOVERY_CLIENT.discoverFromRegistry(cloud2, null);
-			if (cloud2Discovery == null || cloud2Discovery.toString().equals("null (null)")){
-				
-				LOGGER.debug("Cloud2 not found.");
-				throw new NullPointerException("Cloud2 not found.");
-			}
+			XDIDiscoveryResult cloudDiscovery = authenticate(cloud, cloudSecretToken);
+			XDIDiscoveryResult cloud1Discovery = getXDIDiscovery(cloud1);
+			XDIDiscoveryResult cloud2Discovery = getXDIDiscovery(cloud2);
 			
 			String cloudNumber = cloudDiscovery.getCloudNumber().toString();
 			String cloud1CloudNumber = cloud1Discovery.getCloudNumber().toString();
@@ -780,13 +797,13 @@ public class ConnectionServiceImpl implements ConnectionService{
 			if(guardianCloudNumber!=null && !guardianCloudNumber.equals("")){
 				
 				LOGGER.debug("You are not authorized to unblock a connection");
-				throw new Exception("You are not authorized to unblock a connection");
+				throw new ChatValidationException(ChatErrors.UNAUTHORIZED_ACTION.getErrorCode(),ChatErrors.UNAUTHORIZED_ACTION.getErrorMessage());
 			}
 			
 			LOGGER.debug("Checking if cloud1: {} is a self or dependent cloud of cloud: {}",cloud1.toString(), cloud.toString());
 			if(!cloudNumber.equals(cloud1CloudNumber) && !cloudNumber.equals(guardian1CloudNumber)){
 				LOGGER.debug("Invalid cloud1 provided");
-				throw new Exception("Incorrect cloud1 provided. ");
+				throw new ChatValidationException(ChatErrors.INVALID_CLOUD1_PROVIDED.getErrorCode(),ChatErrors.INVALID_CLOUD1_PROVIDED.getErrorMessage());
 			}													
 			
 			LOGGER.debug("Getting connection request between cloud1: {}, cloud2: {}", cloud1.toString(), cloud2.toString());
@@ -796,7 +813,7 @@ public class ConnectionServiceImpl implements ConnectionService{
 			if(connectionRequestList == null || connectionRequestList.size()==0){
 				
 				LOGGER.debug("Connection request not found");
-				throw new NullPointerException("Connection request not found");
+				throw new ChatValidationException(ChatErrors.CONNECTION_REQUEST_NOT_FOUND.getErrorCode(), ChatErrors.CONNECTION_REQUEST_NOT_FOUND.getErrorMessage());
 			}
 				
 			for (Object obj : connectionRequestList) {
@@ -815,7 +832,7 @@ public class ConnectionServiceImpl implements ConnectionService{
 						if(deleted != null && deleted.equals(Deleted.DELETED_BY_REQUESTER.getDeleted())){
 							
 							LOGGER.debug("Conenction request not found.");
-							throw new Exception("Connection request not found.");
+							throw new ChatValidationException(ChatErrors.CONNECTION_REQUEST_NOT_FOUND.getErrorCode(), ChatErrors.CONNECTION_REQUEST_NOT_FOUND.getErrorMessage());
 						}
 						if(status.equals(Status.BLOCKED_BY_REQUESTER.getStatus())){
 							
@@ -828,13 +845,13 @@ public class ConnectionServiceImpl implements ConnectionService{
 						}else{
 							
 							LOGGER.debug("Connection can not be unblocked until blocked");
-							throw new Exception("Connection can not be unblocked until blocked");
+							throw new ChatValidationException(ChatErrors.BLOCK_THE_CONNECTION_FIRST.getErrorCode(), ChatErrors.BLOCK_THE_CONNECTION_FIRST.getErrorMessage());
 						}
 					}else if(acceptingCloudNumber.equals(cloudNumber) || acceptingCloudNumber.equals(cloud1CloudNumber)){
 
 						if(deleted != null && deleted.equals(Deleted.DELETED_BY_ACCEPTOR.getDeleted())){
 							LOGGER.debug("Conenction request not found.");
-							throw new Exception("Connection request not found.");
+							throw new ChatValidationException(ChatErrors.CONNECTION_REQUEST_NOT_FOUND.getErrorCode(), ChatErrors.CONNECTION_REQUEST_NOT_FOUND.getErrorMessage());
 						}
 						if(status.equals(Status.BLOCKED_BY_ACCEPTOR.getStatus())){
 							
@@ -846,7 +863,7 @@ public class ConnectionServiceImpl implements ConnectionService{
 						}else{
 							
 							LOGGER.debug("Connection can not be unblocked until blocked");
-							throw new Exception("Connection can not be unblocked until blocked");
+							throw new ChatValidationException(ChatErrors.BLOCK_THE_CONNECTION_FIRST.getErrorCode(), ChatErrors.BLOCK_THE_CONNECTION_FIRST.getErrorMessage());
 						}
 					}
 					
@@ -859,12 +876,16 @@ public class ConnectionServiceImpl implements ConnectionService{
 				}
 			}			
 			
-		}catch(Exception ex){
+		}catch (ChatValidationException chatException) {
+
+			LOGGER.error("Error while unblocking connection: {}",chatException.getMessage());
+			throw chatException;
 			
+		}catch (Exception ex) {
+
 			LOGGER.error("Error while unblocking connection: {}",ex.getMessage());
-			throw new ConnectionNotFoundException(ex.getMessage());
+			throw new ChatSystemException(ChatErrors.SYSTEM_ERROR.getErrorCode(),ChatErrors.SYSTEM_ERROR.getErrorMessage());
 		}
-		
 		LOGGER.debug("Exit unblockConnection with cloud: {}, cloud1: {}, cloud2: {}", cloud, cloud1, cloud2);		
 		return new ConnectionImpl(cloud1, cloud2);
 	}
@@ -877,38 +898,10 @@ public class ConnectionServiceImpl implements ConnectionService{
 		
 		LOGGER.debug("Enter deleteConnection with cloud: {}, cloud1: {}, cloud2: {}", cloud, cloud1, cloud2);
 		try {
-
-			LOGGER.debug("Getting discovery of cloud: {}", cloud.toString());
-			XDIDiscoveryResult cloudDiscovery = InitFilter.XDI_DISCOVERY_CLIENT.discoverFromRegistry(cloud, null);
-			if (cloudDiscovery == null|| cloudDiscovery.toString().equals("null (null)")){
-				
-				LOGGER.debug("Cloud not found.");
-				throw new NullPointerException("Cloud not found.");
-			}
-
-			LOGGER.debug("Authenticating cloud: {}",cloud.toString());
-			PrivateKey cloudPrivateKey = XDIClientUtil.retrieveSignaturePrivateKey(cloudDiscovery.getCloudNumber(), cloudDiscovery.getXdiEndpointUrl(), cloudSecretToken);
-			if (cloudPrivateKey == null){
-				
-				LOGGER.debug("Cloud private key not found.");
-				throw new NullPointerException("Cloud private key not found.");
-			}
 			
-			LOGGER.debug("Getting discovery of cloud1: {}", cloud1.toString());
-			XDIDiscoveryResult cloud1Discovery = InitFilter.XDI_DISCOVERY_CLIENT.discoverFromRegistry(cloud1, null);
-			if (cloud1Discovery == null|| cloudDiscovery.toString().equals("null (null)")){
-				
-				LOGGER.debug("Cloud1 not found.");
-				throw new NullPointerException("Cloud1 not found.");
-			}
-			
-			LOGGER.debug("Getting discovery of cloud2: {}", cloud2.toString());
-			XDIDiscoveryResult cloud2Discovery = InitFilter.XDI_DISCOVERY_CLIENT.discoverFromRegistry(cloud2, null);
-			if (cloud2Discovery == null|| cloud2Discovery.toString().equals("null (null)")){
-				
-				LOGGER.debug("Cloud2 not found.");
-				throw new NullPointerException("Cloud2 not found.");
-			}
+			XDIDiscoveryResult cloudDiscovery = authenticate(cloud, cloudSecretToken);
+			XDIDiscoveryResult cloud1Discovery = getXDIDiscovery(cloud1);
+			XDIDiscoveryResult cloud2Discovery = getXDIDiscovery(cloud2);
 			
 			String cloudNumber = cloudDiscovery.getCloudNumber().toString();
 			String cloud1CloudNumber = cloud1Discovery.getCloudNumber().toString();
@@ -918,7 +911,7 @@ public class ConnectionServiceImpl implements ConnectionService{
 			LOGGER.debug("Checking if cloud1: {} is a self or dependent cloud of cloud: {}",cloud1.toString(), cloud.toString());
 			if(!cloudNumber.equals(cloud1CloudNumber) && !cloudNumber.equals(guardianCloudNumber)){
 				LOGGER.debug("Invalid cloud1 provided");
-				throw new Exception("Incorrect cloud1 provided. ");
+				throw new ChatValidationException(ChatErrors.INVALID_CLOUD1_PROVIDED.getErrorCode(),ChatErrors.INVALID_CLOUD1_PROVIDED.getErrorMessage());
 			}
 						
 			LOGGER.debug("Getting connection request between cloud1: {}, cloud2: {}", cloud1.toString(), cloud2.toString());
@@ -928,7 +921,7 @@ public class ConnectionServiceImpl implements ConnectionService{
 			if(connectionRequestList == null || connectionRequestList.size()==0){
 				
 				LOGGER.debug("Connection request not found");
-				throw new NullPointerException("Connection request not found");
+				throw new ChatValidationException(ChatErrors.CONNECTION_REQUEST_NOT_FOUND.getErrorCode(), ChatErrors.CONNECTION_REQUEST_NOT_FOUND.getErrorMessage());
 			}
 				
 			for (Object obj : connectionRequestList) {
@@ -954,10 +947,27 @@ public class ConnectionServiceImpl implements ConnectionService{
 								
 								LOGGER.debug("Deleteing connection reuest from DB");
 								connectionRequestDAO.deleteRequest(connectionRequest);								
+							}else if (deleted != null && deleted.equals(Deleted.RENEWED_BY_ACCEPTOR.getDeleted())){
+							
+								String preReqConnectionName = connectionRequest.getRequestingConnectionName();
+								String preAccConnectionName = connectionRequest.getAcceptingConnectionName();
+								
+								connectionRequestDAO.deleteRequest(connectionRequest);
+								
+								ConnectingClouds connectingClouds = new ConnectingClouds(requestingCloudNumber, acceptingCloudNumber);
+								
+								connectionRequest.setConnectingClouds(connectingClouds);								
+								connectionRequest.setApprovingCloudNumber(EntityUtil.getGuardianCloudNumber(acceptingCloudNumber));
+								connectionRequest.setRequestingConnectionName(preAccConnectionName);
+								connectionRequest.setAcceptingConnectionName(preReqConnectionName);
+								connectionRequest.setStatus(Status.NEW.getStatus());
+								connectionRequest.setDeleted(null);
+																
+								connectionRequestDAO.requestConnection(connectionRequest);
 							}else{
 								
 								LOGGER.debug("Connection is already deleted.");
-								throw new Exception("Connection is already deleted.");
+								throw new ChatValidationException(ChatErrors.ACTION_ALREADY_PERFORMED.getErrorCode(),ChatErrors.ACTION_ALREADY_PERFORMED.getErrorMessage());
 							}
 
 						}else if(acceptingCloudNumber.equals(cloudNumber) || acceptingCloudNumber.equals(cloud1CloudNumber)){
@@ -966,28 +976,40 @@ public class ConnectionServiceImpl implements ConnectionService{
 								
 								LOGGER.debug("Deleting connection request by acceptor");
 								connectionRequest.setDeleted(Deleted.DELETED_BY_ACCEPTOR.getDeleted());
-								connectionRequestDAO.updateRequest(connectionRequest);								
-							}else if(deleted.equals(Deleted.DELETED_BY_REQUESTER.getDeleted())){
+								connectionRequestDAO.updateRequest(connectionRequest);	
+								
+							}else if(deleted != null && deleted.equals(Deleted.DELETED_BY_REQUESTER.getDeleted())){
 								
 								LOGGER.debug("Deleteing connection reuest from DB");
 								connectionRequestDAO.deleteRequest(connectionRequest);								
+							}else if (deleted != null && deleted.equals(Deleted.RENEWED_BY_REQUESTER.getDeleted())){
+											
+								connectionRequest.setApprovingCloudNumber(EntityUtil.getGuardianCloudNumber(requestingCloudNumber));
+								connectionRequest.setStatus(Status.NEW.getStatus());
+								connectionRequest.setDeleted(null);
+																
+								connectionRequestDAO.updateRequest(connectionRequest);
 							}else{
 								
-								LOGGER.debug("Connection is already deleted.");
-								throw new Exception("Connection is already deleted.");
+								LOGGER.debug("Connection Not found.");
+								throw new ChatValidationException(ChatErrors.CONNECTION_REQUEST_NOT_FOUND.getErrorCode(), ChatErrors.CONNECTION_REQUEST_NOT_FOUND.getErrorMessage());
 							}							
 						}												
 					}else{
 						
 						LOGGER.debug("A connection can not be deleted until approved.");
-						throw new Exception("A connection can not be deleted until approved.");
+						throw new ChatValidationException(ChatErrors.APPROVE_THE_CONNECTION_FIRST.getErrorCode(), ChatErrors.APPROVE_THE_CONNECTION_FIRST.getErrorMessage());
 					}					
 				}
 			}						
-		}catch(Exception ex){
-			
+		}catch (ChatValidationException chatException) {
+
+			LOGGER.error("Error while deleting connection: {}",chatException.getMessage());
+			throw chatException;
+		}catch (Exception ex) {
+
 			LOGGER.error("Error while deleting connection: {}",ex.getMessage());
-			throw new ConnectionNotFoundException(ex.getMessage());
+			throw new ChatSystemException(ChatErrors.SYSTEM_ERROR.getErrorCode(),ChatErrors.SYSTEM_ERROR.getErrorMessage());
 		}
 		
 		LOGGER.debug("Exit deleteConnection with cloud: {}, cloud1: {}, cloud2: {}", cloud, cloud1, cloud2);		
@@ -1003,22 +1025,9 @@ public class ConnectionServiceImpl implements ConnectionService{
 		LOGGER.debug("Enter findConnection with requestingCloud: {}, acceptingCloud: {}", cloud1, cloud2);
 		Connection connection = null;
 		try {
-			
-			LOGGER.debug("Getting discovery of requestingCloud: {}", cloud1.toString());  
-			XDIDiscoveryResult cloud1Discovery = InitFilter.XDI_DISCOVERY_CLIENT.discoverFromRegistry(cloud1, null);
-			if (cloud1Discovery == null|| cloud1Discovery.toString().equals("null (null)")){
-				
-				LOGGER.debug("Cloud1: {} not found", cloud1.toString());
-				throw new NullPointerException("Cloud1 not found.");
-			}
-
-			LOGGER.debug("Getting discovery of acceptingCloud: {}", cloud2.toString());
-			XDIDiscoveryResult cloud2Discovery = InitFilter.XDI_DISCOVERY_CLIENT.discoverFromRegistry(cloud2, null);
-			if (cloud2Discovery == null|| cloud2Discovery.toString().equals("null (null)")){
-				
-				LOGGER.error("Cloud2: {} not found", cloud2.toString());
-				throw new NullPointerException("Cloud2 not found.");						
-			}						
+						  
+			XDIDiscoveryResult cloud1Discovery = getXDIDiscovery(cloud1);
+			XDIDiscoveryResult cloud2Discovery = getXDIDiscovery(cloud2);					
 			
 			String cloudNumber1 = cloud1Discovery.getCloudNumber().toString();
 			String cloudNumber2 = cloud2Discovery.getCloudNumber().toString();
@@ -1030,7 +1039,7 @@ public class ConnectionServiceImpl implements ConnectionService{
 			if(connectionRequestList == null || connectionRequestList.size()==0){
 				
 				LOGGER.debug("Connection request not found");
-				throw new NullPointerException("Connection request not found");
+				throw new ChatValidationException(ChatErrors.CONNECTION_REQUEST_NOT_FOUND.getErrorCode(), ChatErrors.CONNECTION_REQUEST_NOT_FOUND.getErrorMessage());
 			}
 									
 			ConnectionRequest connectionRequest = (ConnectionRequest)connectionRequestList.get(0);
@@ -1050,21 +1059,30 @@ public class ConnectionServiceImpl implements ConnectionService{
 					approved1 = true;
 					approved2 = true;
 					
-				}else{ 
-					if(status.equals(Status.BLOCKED.getStatus())){
+				}else if(status.equals(Status.BLOCKED.getStatus())){
+					blocked1 = true;
+					blocked2 = true;
+						
+				}else if(status.equals(Status.BLOCKED_BY_REQUESTER.getStatus())){
+					
+					if(cloudNumber1.equals(connectionRequest.getConnectingClouds().getRequestingCloudNumber())){
+						
 						blocked1 = true;
+						approved2 = true;																	
+					}else{				
 						blocked2 = true;
-						
-					}else if(cloudNumber1.equals(connectionRequest.getConnectingClouds().getRequestingCloudNumber()) 
-							&& status.equals(Status.BLOCKED_BY_REQUESTER.getStatus())){
-						
-						blocked1 = true;
-						
-					}else if(cloudNumber1.equals(connectionRequest.getConnectingClouds().getAcceptingCloudNumber()) 
-							&& status.equals(Status.BLOCKED_BY_ACCEPTOR.getStatus())){
-						
-						blocked2 = true;
+						approved1 = true;
 					}
+				}else if(status.equals(Status.BLOCKED_BY_ACCEPTOR.getStatus())){
+					
+					if(cloudNumber1.equals(connectionRequest.getConnectingClouds().getAcceptingCloudNumber())){
+						
+						blocked2 = true;
+						approved1 = true;
+					}else{
+						blocked1 = true;
+						approved2 = true;
+					}					
 				}
 			}
 			
@@ -1072,17 +1090,20 @@ public class ConnectionServiceImpl implements ConnectionService{
 			if(cloudNumber1.equals(connectionRequest.getConnectingClouds().getRequestingCloudNumber())){
 				connectionName = CloudName.create(connectionRequest.getAcceptingConnectionName());
 			}else{
-				connectionName = CloudName.create(connectionRequest.getAcceptingConnectionName());
+				connectionName = CloudName.create(connectionRequest.getRequestingConnectionName());
 			}						
 				
 			connection = new ConnectionImpl(cloud1, cloud2, isApprovalReq, approved1, approved2, blocked1, blocked2, connectionName);					
 			
-		}catch(Exception ex){
-			
-			LOGGER.error("Error while find connection: {}",ex.getMessage());
-			throw new ConnectionNotFoundException(ex.getMessage());
+		}catch (ChatValidationException chatException) {
+
+			LOGGER.error("Error while finding connection: {}",chatException.getMessage());
+			throw chatException;
+		}catch (Exception ex) {
+
+			LOGGER.error("Error while finding connection: {}",ex.getMessage());
+			throw new ChatSystemException(ChatErrors.SYSTEM_ERROR.getErrorCode(),ChatErrors.SYSTEM_ERROR.getErrorMessage());
 		}
-		
 		return connection;		
 	}
 }
