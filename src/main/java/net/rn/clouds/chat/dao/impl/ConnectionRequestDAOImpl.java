@@ -3,18 +3,14 @@
  */
 package net.rn.clouds.chat.dao.impl;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
 import net.rn.clouds.chat.dao.ConnectionRequestDAO;
-import net.rn.clouds.chat.hibernate.HibernateConf;
 import net.rn.clouds.chat.model.ConnectingClouds;
 import net.rn.clouds.chat.model.ConnectionRequest;
 
-import org.hibernate.Criteria;
 import org.hibernate.Session;
-import org.hibernate.Transaction;
 import org.hibernate.criterion.Restrictions;
 
 /**
@@ -29,7 +25,7 @@ public class ConnectionRequestDAOImpl extends
 	 * @see net.rn.clouds.chat.dao.ConnectionRequestDAO#getConnectionRequest(java.lang.String, java.lang.String)
 	 */
 	@Override
-	public List getConnectionRequest(String cloud1,
+	public List<ConnectionRequest> getConnectionRequest(String cloud1,
 			String cloud2) {
 		
 		return findByCriteria(Restrictions.or(Restrictions.and(Restrictions.eq(
@@ -61,7 +57,7 @@ public class ConnectionRequestDAOImpl extends
 	 */
 	@Override
 	//@SuppressWarnings("unchecked")
-	public List viewConnections(Collection children) {
+	public List<ConnectionRequest> viewConnections(Collection<String> children) {
 
 		return findByCriteria(Restrictions.or(Restrictions.in(
 				"connectingClouds.requestingCloudNumber", children),

@@ -14,7 +14,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import net.rn.clouds.chat.service.impl.ConnectionImpl;
-import net.rn.clouds.chat.service.impl.ConnectionServiceImpl;
 import xdi2.core.syntax.XDIAddress;
 import xdi2.core.syntax.parser.ParserException;
 import biz.neustar.clouds.chat.CynjaCloudChat;

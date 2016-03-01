@@ -35,8 +35,8 @@ public class ConnectionRequest implements Serializable{
 	@Column(name = "status")
 	private String status;
 	
-	@Column(name = "deleted")
-	private String deleted;		
+	@Column(name = "delete_renew")
+	private String deleteRenew;		
 
 	@Column(name = "creation_date")
 	Date creationDate;	
@@ -81,12 +81,12 @@ public class ConnectionRequest implements Serializable{
 		this.status = status;
 	}
 	
-	public String getDeleted() {
-		return deleted;
+	public String getDeleteRenew() {
+		return deleteRenew;
 	}
 
-	public void setDeleted(String deleted) {
-		this.deleted = deleted;
+	public void setDeleteRenew(String deleteRenew) {
+		this.deleteRenew = deleteRenew;
 	}
 
 	public Date getCreationDate() {

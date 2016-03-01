@@ -15,14 +15,14 @@
 
 function request() {
 
-	var child1 = $("#requestChild1").val().trim(); if (! child1) { alert("Please enter \"Child 1\""); return; }
-	var child1SecretToken = $("#requestChild1SecretToken").val().trim(); if (! child1SecretToken) { alert("Please enter \"Child 1 Secret Token\""); return; }
-	var child2 = $("#requestChild2").val().trim(); if (! child2) { alert("Please enter \"Child 2\""); return; }
+	var cloud1 = $("#requestCloud1").val().trim(); if (! cloud1) { alert("Please enter \"Cloud 1\""); return; }
+	var cloud1SecretToken = $("#requestCloud1SecretToken").val().trim(); if (! cloud1SecretToken) { alert("Please enter \"Cloud 1 Secret Token\""); return; }
+	var cloud2 = $("#requestCloud2").val().trim(); if (! cloud2) { alert("Please enter \"Cloud 2\""); return; }
 
 	$.ajax({
 	    url: '/v2/request',
 	    type: 'POST',
-	    data: 'cloud1=' + encodeURIComponent(child1) + '&' + 'cloud1SecretToken=' + encodeURIComponent(child1SecretToken) + '&' + 'cloud2=' + encodeURIComponent(child2),
+	    data: 'cloud1=' + encodeURIComponent(cloud1) + '&' + 'cloud1SecretToken=' + encodeURIComponent(cloud1SecretToken) + '&' + 'cloud2=' + encodeURIComponent(cloud2),
 	    success: function(data) { alert('success: ' + JSON.stringify(data)); },
 	    error: function(msg) { alert('error: ' + JSON.stringify(msg)); }
 	});
@@ -30,15 +30,15 @@ function request() {
 
 function approve() {
 
-	var parent = $("#approveParent").val().trim(); if (! parent) { alert("Please enter \"Parent\""); return; }
-	var parentSecretToken = $("#approveParentSecretToken").val().trim(); if (! parentSecretToken) { alert("Please enter \"Parent Secret Token\""); return; }
-	var child1 = $("#approveChild1").val().trim(); if (! child1) { alert("Please enter \"Child 1\""); return; }
-	var child2 = $("#approveChild2").val().trim(); if (! child2) { alert("Please enter \"Child 2\""); return; }
+	var cloud = $("#approveCloud").val().trim(); if (! cloud) { alert("Please enter \"Cloud\""); return; }
+	var cloudSecretToken = $("#approveCloudSecretToken").val().trim(); if (! cloudSecretToken) { alert("Please enter \"Cloud Secret Token\""); return; }
+	var cloud1 = $("#approveCloud1").val().trim(); if (! cloud1) { alert("Please enter \"Cloud 1\""); return; }
+	var cloud2 = $("#approveCloud2").val().trim(); if (! cloud2) { alert("Please enter \"Cloud 2\""); return; }
 
 	$.ajax({
 	    url: '/v2/approve',
 	    type: 'POST',
-	    data: 'cloud=' + encodeURIComponent(parent) + '&' + 'cloudSecretToken=' + encodeURIComponent(parentSecretToken) + '&' + 'cloud1=' + encodeURIComponent(child1) + '&' + 'cloud2=' + encodeURIComponent(child2),
+	    data: 'cloud=' + encodeURIComponent(cloud) + '&' + 'cloudSecretToken=' + encodeURIComponent(cloudSecretToken) + '&' + 'cloud1=' + encodeURIComponent(cloud1) + '&' + 'cloud2=' + encodeURIComponent(cloud2),
 	    success: function(data) { alert('success: ' + JSON.stringify(data)); },
 	    error: function(msg) { alert('error: ' + JSON.stringify(msg)); }
 	});
@@ -58,15 +58,15 @@ function viewasparent() {
 	});
 }
 
-function viewaschild() {
+function viewascloud() {
 
-	var child = $("#viewaschildChild").val().trim(); if (! child) { alert("Please enter \"Child\""); return; }
-	var childSecretToken = $("#viewaschildChildSecretToken").val().trim(); if (! childSecretToken) { alert("Please enter \"Child Secret Token\""); return; }
+	var cloud = $("#viewascloudCloud").val().trim(); if (! cloud) { alert("Please enter \"Cloud\""); return; }
+	var cloudSecretToken = $("#viewascloudCloudSecretToken").val().trim(); if (! cloudSecretToken) { alert("Please enter \"Cloud Secret Token\""); return; }
 
 	$.ajax({
 	    url: '/v2/viewaschild',
 	    type: 'POST',
-	    data: 'cloud=' + encodeURIComponent(child) + '&' + 'cloudSecretToken=' + encodeURIComponent(childSecretToken),
+	    data: 'cloud=' + encodeURIComponent(cloud) + '&' + 'cloudSecretToken=' + encodeURIComponent(cloudSecretToken),
 	    success: function(data) { alert('success: ' + JSON.stringify(data)); },
 	    error: function(msg) { alert('error: ' + JSON.stringify(msg)); }
 	});
@@ -74,15 +74,15 @@ function viewaschild() {
 
 function logs() {
 
-	var parent = $("#logsParent").val().trim(); if (! parent) { alert("Please enter \"Parent\""); return; }
-	var parentSecretToken = $("#logsParentSecretToken").val().trim(); if (! parentSecretToken) { alert("Please enter \"Parent Secret Token\""); return; }
-	var child1 = $("#logsChild1").val().trim(); if (! child1) { alert("Please enter \"Child 1\""); return; }
-	var child2 = $("#logsChild2").val().trim(); if (! child2) { alert("Please enter \"Child 2\""); return; }
+	var cloud = $("#logsCloud").val().trim(); if (! cloud) { alert("Please enter \"Cloud\""); return; }
+	var cloudSecretToken = $("#logsCloudSecretToken").val().trim(); if (! cloudSecretToken) { alert("Please enter \"Cloud Secret Token\""); return; }
+	var cloud1 = $("#logsCloud1").val().trim(); if (! cloud1) { alert("Please enter \"Cloud 1\""); return; }
+	var cloud2 = $("#logsCloud2").val().trim(); if (! cloud2) { alert("Please enter \"Cloud 2\""); return; }
 
 	$.ajax({
 	    url: '/v2/logs',
 	    type: 'POST',
-	    data: 'cloud=' + encodeURIComponent(parent) + '&' + 'cloudSecretToken=' + encodeURIComponent(parentSecretToken) + '&' + 'cloud1=' + encodeURIComponent(child1) + '&' + 'cloud2=' + encodeURIComponent(child2),
+	    data: 'cloud=' + encodeURIComponent(cloud) + '&' + 'cloudSecretToken=' + encodeURIComponent(cloudSecretToken) + '&' + 'cloud1=' + encodeURIComponent(cloud1) + '&' + 'cloud2=' + encodeURIComponent(cloud2),
 	    success: function(data) { alert('success: ' + JSON.stringify(data)); },
 	    error: function(msg) { alert('error: ' + JSON.stringify(msg)); }
 	});
@@ -90,15 +90,15 @@ function logs() {
 
 function block() {
 
-	var parent = $("#blockParent").val().trim(); if (! parent) { alert("Please enter \"Parent\""); return; }
-	var parentSecretToken = $("#blockParentSecretToken").val().trim(); if (! parentSecretToken) { alert("Please enter \"Parent Secret Token\""); return; }
-	var child1 = $("#blockChild1").val().trim(); if (! child1) { alert("Please enter \"Child 1\""); return; }
-	var child2 = $("#blockChild2").val().trim(); if (! child2) { alert("Please enter \"Child 2\""); return; }
+	var cloud = $("#blockCloud").val().trim(); if (! cloud) { alert("Please enter \"Cloud\""); return; }
+	var cloudSecretToken = $("#blockCloudSecretToken").val().trim(); if (! cloudSecretToken) { alert("Please enter \"Cloud Secret Token\""); return; }
+	var cloud1 = $("#blockCloud1").val().trim(); if (! cloud1) { alert("Please enter \"Cloud 1\""); return; }
+	var cloud2 = $("#blockCloud2").val().trim(); if (! cloud2) { alert("Please enter \"Cloud 2\""); return; }
 
 	$.ajax({
 	    url: '/v2/block',
 	    type: 'POST',
-	    data: 'cloud=' + encodeURIComponent(parent) + '&' + 'cloudSecretToken=' + encodeURIComponent(parentSecretToken) + '&' + 'cloud1=' + encodeURIComponent(child1) + '&' + 'cloud2=' + encodeURIComponent(child2),
+	    data: 'cloud=' + encodeURIComponent(cloud) + '&' + 'cloudSecretToken=' + encodeURIComponent(cloudSecretToken) + '&' + 'cloud1=' + encodeURIComponent(cloud1) + '&' + 'cloud2=' + encodeURIComponent(cloud2),
 	    success: function(data) { alert('success: ' + JSON.stringify(data)); },
 	    error: function(msg) { alert('error: ' + JSON.stringify(msg)); }
 	});
@@ -106,15 +106,15 @@ function block() {
 
 function unblock() {
 
-	var parent = $("#unblockParent").val().trim(); if (! parent) { alert("Please enter \"Parent\""); return; }
-	var parentSecretToken = $("#unblockParentSecretToken").val().trim(); if (! parentSecretToken) { alert("Please enter \"Parent Secret Token\""); return; }
-	var child1 = $("#unblockChild1").val().trim(); if (! child1) { alert("Please enter \"Child 1\""); return; }
-	var child2 = $("#unblockChild2").val().trim(); if (! child2) { alert("Please enter \"Child 2\""); return; }
+	var cloud = $("#unblockCloud").val().trim(); if (! cloud) { alert("Please enter \"Cloud\""); return; }
+	var cloudSecretToken = $("#unblockCloudSecretToken").val().trim(); if (! cloudSecretToken) { alert("Please enter \"Cloud Secret Token\""); return; }
+	var cloud1 = $("#unblockCloud1").val().trim(); if (! cloud1) { alert("Please enter \"Cloud 1\""); return; }
+	var cloud2 = $("#unblockCloud2").val().trim(); if (! cloud2) { alert("Please enter \"Cloud 2\""); return; }
 
 	$.ajax({
 	    url: '/v2/unblock',
 	    type: 'POST',
-	    data: 'cloud=' + encodeURIComponent(parent) + '&' + 'cloudSecretToken=' + encodeURIComponent(parentSecretToken) + '&' + 'cloud1=' + encodeURIComponent(child1) + '&' + 'cloud2=' + encodeURIComponent(child2),
+	    data: 'cloud=' + encodeURIComponent(cloud) + '&' + 'cloudSecretToken=' + encodeURIComponent(cloudSecretToken) + '&' + 'cloud1=' + encodeURIComponent(cloud1) + '&' + 'cloud2=' + encodeURIComponent(cloud2),
 	    success: function(data) { alert('success: ' + JSON.stringify(data)); },
 	    error: function(msg) { alert('error: ' + JSON.stringify(msg)); }
 	});
@@ -122,15 +122,15 @@ function unblock() {
 
 function delet() {
 
-	var parent = $("#deleteParent").val().trim(); if (! parent) { alert("Please enter \"Parent\""); return; }
-	var parentSecretToken = $("#deleteParentSecretToken").val().trim(); if (! parentSecretToken) { alert("Please enter \"Parent Secret Token\""); return; }
-	var child1 = $("#deleteChild1").val().trim(); if (! child1) { alert("Please enter \"Child 1\""); return; }
-	var child2 = $("#deleteChild2").val().trim(); if (! child2) { alert("Please enter \"Child 2\""); return; }
+	var cloud = $("#deleteCloud").val().trim(); if (! cloud) { alert("Please enter \"Cloud\""); return; }
+	var cloudSecretToken = $("#deleteCloudSecretToken").val().trim(); if (! cloudSecretToken) { alert("Please enter \"Cloud Secret Token\""); return; }
+	var cloud1 = $("#deleteCloud1").val().trim(); if (! cloud1) { alert("Please enter \"Cloud 1\""); return; }
+	var cloud2 = $("#deleteCloud2").val().trim(); if (! cloud2) { alert("Please enter \"Cloud 2\""); return; }
 
 	$.ajax({
 	    url: '/v2/delete',
 	    type: 'POST',
-	    data: 'cloud=' + encodeURIComponent(parent) + '&' + 'cloudSecretToken=' + encodeURIComponent(parentSecretToken) + '&' + 'cloud1=' + encodeURIComponent(child1) + '&' + 'cloud2=' + encodeURIComponent(child2),
+	    data: 'cloud=' + encodeURIComponent(cloud) + '&' + 'cloudSecretToken=' + encodeURIComponent(cloudSecretToken) + '&' + 'cloud1=' + encodeURIComponent(cloud1) + '&' + 'cloud2=' + encodeURIComponent(cloud2),
 	    success: function(data) { alert('success: ' + JSON.stringify(data)); },
 	    error: function(msg) { alert('error: ' + JSON.stringify(msg)); }
 	});
@@ -142,11 +142,11 @@ function chatStart() {
 
 	if (ws) chatStop();
 
-	var child1 = $("#chatChild1").val().trim(); if (! child1) { alert("Please enter \"Child 1\""); return; }
-	var child2 = $("#chatChild2").val().trim(); if (! child2) { alert("Please enter \"Child 2\""); return; }
-	var child1SecretToken = $("#chatChild1SecretToken").val().trim(); if (! child1SecretToken) { alert("Please enter \"Child 1 Secret Token\""); return; }
+	var cloud1 = $("#chatCloud1").val().trim(); if (! cloud1) { alert("Please enter \"Cloud 1\""); return; }
+	var cloud2 = $("#chatCloud2").val().trim(); if (! cloud2) { alert("Please enter \"Cloud 2\""); return; }
+	var cloud1SecretToken = "";//$("#chatCloud1SecretToken").val().trim(); if (! cloud1SecretToken) { alert("Please enter \"Cloud 1 Secret Token\""); return; }
 
-	var url = window.location.href.replace("http", "ws") + "v2/chat/" + encodeURIComponent(child1) + '/' + encodeURIComponent(child2) + '?child1SecretToken=' + child1SecretToken;
+	var url = window.location.href.replace("http", "ws") + "v2/chat/" + encodeURIComponent(cloud1) + '/' + encodeURIComponent(cloud2) + '?child1SecretToken=' + cloud1SecretToken;
 
 	ws = new WebSocket(url, ["cynja-chat"]);
 
@@ -235,9 +235,9 @@ function chatMessage() {
 
 <div id="chat">
 <table>
-<tr><td>Child 1:</td><td><input type="text" id="chatChild1"></td></tr>
-<tr><td>Child 2:</td><td><input type="text" id="chatChild2"></td></tr>
-<tr><td>Child 1 Secret Token:</td><td><input type="text" id="chatChild1SecretToken"></td></tr>
+<tr><td>Cloud 1:</td><td><input type="text" id="chatCloud1"></td></tr>
+<tr><td>Cloud 2:</td><td><input type="text" id="chatCloud2"></td></tr>
+<!-- <tr><td>Child 1 Secret Token:</td><td><input type="text" id="chatCloud1SecretToken"></td></tr> -->
 <tr><td><button onclick="chatStart();">Start Chat</button></td><td><button onclick="chatStop();">Stop Chat</button></td></tr>
 </table>
 <textarea id="messages"></textarea>
@@ -253,9 +253,9 @@ function chatMessage() {
 <div>
 <p class="heading">Request Connection</p>
 <table>
-<tr><td>Child 1</td><td><input type="text" id="requestChild1"></td></tr>
-<tr><td>Child 1 Secret Token</td><td><input type="text" id="requestChild1SecretToken"></td></tr>
-<tr><td>Child 2</td><td><input type="text" id="requestChild2"></td></tr>
+<tr><td>Cloud 1</td><td><input type="text" id="requestCloud1"></td></tr>
+<tr><td>Cloud 1 Secret Token</td><td><input type="text" id="requestCloud1SecretToken"></td></tr>
+<tr><td>Cloud 2</td><td><input type="text" id="requestCloud2"></td></tr>
 </table>
 <button onclick="request();">Request</button>
 </div>
@@ -263,10 +263,10 @@ function chatMessage() {
 <div>
 <p class="heading">Approve Connection</p>
 <table>
-<tr><td>Parent</td><td><input type="text" id="approveParent"></td></tr>
-<tr><td>Parent Secret Token</td><td><input type="text" id="approveParentSecretToken"></td></tr>
-<tr><td>Child 1</td><td><input type="text" id="approveChild1"></td></tr>
-<tr><td>Child 2</td><td><input type="text" id="approveChild2"></td></tr>
+<tr><td>Cloud</td><td><input type="text" id="approveCloud"></td></tr>
+<tr><td>Cloud Secret Token</td><td><input type="text" id="approveCloudSecretToken"></td></tr>
+<tr><td>Cloud 1</td><td><input type="text" id="approveCloud1"></td></tr>
+<tr><td>Cloud 2</td><td><input type="text" id="approveCloud2"></td></tr>
 </table>
 <button onclick="approve();">Approve</button>
 </div>
@@ -281,21 +281,21 @@ function chatMessage() {
 </div>
 
 <div>
-<p class="heading">View Connections As Child</p>
+<p class="heading">View Connections As Cloud</p>
 <table>
-<tr><td>Child</td><td><input type="text" id="viewaschildChild"></td></tr>
-<tr><td>Child Secret Token</td><td><input type="text" id="viewaschildChildSecretToken"></td></tr>
+<tr><td>Cloud</td><td><input type="text" id="viewascloudCloud"></td></tr>
+<tr><td>Cloud Secret Token</td><td><input type="text" id="viewascloudCloudSecretToken"></td></tr>
 </table>
-<button onclick="viewaschild();">View As Child</button>
+<button onclick="viewascloud();">View As Cloud</button>
 </div>
 
 <div>
 <p class="heading">View Connection Log</p>
 <table>
-<tr><td>Parent</td><td><input type="text" id="logsParent"></td></tr>
-<tr><td>Parent Secret Token</td><td><input type="text" id="logsParentSecretToken"></td></tr>
-<tr><td>Child 1</td><td><input type="text" id="logsChild1"></td></tr>
-<tr><td>Child 2</td><td><input type="text" id="logsChild2"></td></tr>
+<tr><td>Cloud</td><td><input type="text" id="logsCloud"></td></tr>
+<tr><td>Cloud Secret Token</td><td><input type="text" id="logsCloudSecretToken"></td></tr>
+<tr><td>Cloud 1</td><td><input type="text" id="logsCloud1"></td></tr>
+<tr><td>Cloud 2</td><td><input type="text" id="logsCloud2"></td></tr>
 </table>
 <button onclick="logs();">View Log</button>
 </div>
@@ -303,10 +303,10 @@ function chatMessage() {
 <div>
 <p class="heading">Block Connection</p>
 <table>
-<tr><td>Parent</td><td><input type="text" id="blockParent"></td></tr>
-<tr><td>Parent Secret Token</td><td><input type="text" id="blockParentSecretToken"></td></tr>
-<tr><td>Child 1</td><td><input type="text" id="blockChild1"></td></tr>
-<tr><td>Child 2</td><td><input type="text" id="blockChild2"></td></tr>
+<tr><td>Cloud</td><td><input type="text" id="blockCloud"></td></tr>
+<tr><td>Cloud Secret Token</td><td><input type="text" id="blockCloudSecretToken"></td></tr>
+<tr><td>Cloud 1</td><td><input type="text" id="blockCloud1"></td></tr>
+<tr><td>Cloud 2</td><td><input type="text" id="blockCloud2"></td></tr>
 </table>
 <button onclick="block();">Block</button>
 </div>
@@ -314,10 +314,10 @@ function chatMessage() {
 <div>
 <p class="heading">Unblock Connection</p>
 <table>
-<tr><td>Parent</td><td><input type="text" id="unblockParent"></td></tr>
-<tr><td>Parent Secret Token</td><td><input type="text" id="unblockParentSecretToken"></td></tr>
-<tr><td>Child 1</td><td><input type="text" id="unblockChild1"></td></tr>
-<tr><td>Child 2</td><td><input type="text" id="unblockChild2"></td></tr>
+<tr><td>Cloud</td><td><input type="text" id="unblockCloud"></td></tr>
+<tr><td>Cloud Secret Token</td><td><input type="text" id="unblockCloudSecretToken"></td></tr>
+<tr><td>Cloud 1</td><td><input type="text" id="unblockCloud1"></td></tr>
+<tr><td>Cloud 2</td><td><input type="text" id="unblockCloud2"></td></tr>
 </table>
 <button onclick="unblock();">Unblock</button>
 </div>
@@ -325,10 +325,10 @@ function chatMessage() {
 <div>
 <p class="heading">Delete Connection</p>
 <table>
-<tr><td>Parent</td><td><input type="text" id="deleteParent"></td></tr>
-<tr><td>Parent Secret Token</td><td><input type="text" id="deleteParentSecretToken"></td></tr>
-<tr><td>Child 1</td><td><input type="text" id="deleteChild1"></td></tr>
-<tr><td>Child 2</td><td><input type="text" id="deleteChild2"></td></tr>
+<tr><td>Cloud</td><td><input type="text" id="deleteCloud"></td></tr>
+<tr><td>Cloud Secret Token</td><td><input type="text" id="deleteCloudSecretToken"></td></tr>
+<tr><td>Cloud 1</td><td><input type="text" id="deleteCloud1"></td></tr>
+<tr><td>Cloud 2</td><td><input type="text" id="deleteCloud2"></td></tr>
 </table>
 <button onclick="delet();">Delete</button>
 </div>
