@@ -9,7 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import net.rn.clouds.chat.constants.ChatErrors;
-import net.rn.clouds.chat.constants.Deleted;
+import net.rn.clouds.chat.constants.DeleteRenew;
 import net.rn.clouds.chat.constants.Status;
 import net.rn.clouds.chat.dao.ConnectionRequestDAO;
 import net.rn.clouds.chat.dao.impl.ConnectionRequestDAOImpl;
@@ -110,15 +110,15 @@ public class ConnectionServiceImpl implements ConnectionService{
 					if(obj instanceof ConnectionRequest){
 
 						ConnectionRequest connectionRequest = (ConnectionRequest)obj;
-						String deleted = connectionRequest.getDeleted();
+						String deleteRenew = connectionRequest.getDeleteRenew();
 						String status = connectionRequest.getStatus();
 						String requestingCloudNumber = connectionRequest.getConnectingClouds().getRequestingCloudNumber();
 						String acceptingCloudNumber = connectionRequest.getConnectingClouds().getAcceptingCloudNumber();
 												
-						if((requestingCloudNumber.equals(cloud1Number) && (deleted == null || 
-								(deleted != null && !deleted.equals(Deleted.DELETED_BY_REQUESTER.getDeleted())))) ||
+						if((requestingCloudNumber.equals(cloud1Number) && (deleteRenew == null || 
+								(deleteRenew != null && !deleteRenew.equals(DeleteRenew.DELETED_BY_REQUESTER.getDeleteRenew())))) ||
 							(acceptingCloudNumber.equals(cloud1Number) && !status.equals(Status.NEW.getStatus()) && 
-								(deleted == null || (deleted != null && !deleted.equals(Deleted.DELETED_BY_ACCEPTOR.getDeleted()))))){
+								(deleteRenew == null || (deleteRenew != null && !deleteRenew.equals(DeleteRenew.DELETED_BY_ACCEPTOR.getDeleteRenew()))))){
 							
 								LOGGER.debug("Connection already requested between {} and {}", cloud1.toString(), cloud2.toString());
 								throw new ChatValidationException(ChatErrors.CONNECTION_ALREADY_EXISTS.getErrorCode(),ChatErrors.CONNECTION_ALREADY_EXISTS.getErrorMessage());
@@ -131,10 +131,10 @@ public class ConnectionServiceImpl implements ConnectionService{
 								LOGGER.debug("Approved from cloud1 and renewed from cloud2 ");
 								connectionRequest.setStatus(Status.APPROVED.getStatus());
 								connectionRequest.setApprovingCloudNumber(null);
-								connectionRequest.setDeleted(Deleted.RENEWED_BY_REQUESTER.getDeleted());
+								connectionRequest.setDeleteRenew(DeleteRenew.RENEWED_BY_REQUESTER.getDeleteRenew());
 							}else{
 								LOGGER.debug("Revert the deletion ");
-								connectionRequest.setDeleted(null);
+								connectionRequest.setDeleteRenew(null);
 							}
 															
 						}else{
@@ -142,11 +142,11 @@ public class ConnectionServiceImpl implements ConnectionService{
 							LOGGER.debug("Raise a request to parent to revert the deletion ");
 							if(requestingCloudNumber.equals(cloud1Number)){ 
 																
-								connectionRequest.setDeleted(Deleted.RENEWED_BY_REQUESTER.getDeleted());
+								connectionRequest.setDeleteRenew(DeleteRenew.RENEWED_BY_REQUESTER.getDeleteRenew());
 								
 							}else if(acceptingCloudNumber.equals(cloud1Number)){
 																
-								connectionRequest.setDeleted(Deleted.RENEWED_BY_ACCEPTOR.getDeleted());								
+								connectionRequest.setDeleteRenew(DeleteRenew.RENEWED_BY_ACCEPTOR.getDeleteRenew());								
 							}														
 						}
 						connectionRequestDAO.updateRequest(connectionRequest);						
@@ -245,23 +245,23 @@ public class ConnectionServiceImpl implements ConnectionService{
 					String acceptingCloudNumber = connectionRequest.getConnectingClouds().getAcceptingCloudNumber().toString();
 					
 										
-					String deleted = connectionRequest.getDeleted();
+					String deleteRenew = connectionRequest.getDeleteRenew();
 					String status = connectionRequest.getStatus();
 					String newStatus = status;
 					String newApprover = null;
 										
-					if(deleted != null && !guardianCloudNumber.equals("") && 
-						((cloud1CloudNumber.equals(requestingCloudNumber) && deleted.equals(Deleted.RENEWED_BY_REQUESTER.getDeleted())) ||
-						cloud1CloudNumber.equals(acceptingCloudNumber) && deleted.equals(Deleted.RENEWED_BY_ACCEPTOR.getDeleted()))){
+					if(deleteRenew != null && !guardianCloudNumber.equals("") && 
+						((cloud1CloudNumber.equals(requestingCloudNumber) && deleteRenew.equals(DeleteRenew.RENEWED_BY_REQUESTER.getDeleteRenew())) ||
+						cloud1CloudNumber.equals(acceptingCloudNumber) && deleteRenew.equals(DeleteRenew.RENEWED_BY_ACCEPTOR.getDeleteRenew()))){
 						
 							if(status.equals(Status.NEW.getStatus())){
 								
 								connectionRequest.setStatus(Status.APPROVED.getStatus());
 								connectionRequest.setApprovingCloudNumber(null);
-								connectionRequest.setDeleted(Deleted.RENEWED_BY_REQUESTER.getDeleted());
+								connectionRequest.setDeleteRenew(DeleteRenew.RENEWED_BY_REQUESTER.getDeleteRenew());
 								
 							}else{
-								connectionRequest.setDeleted(null);
+								connectionRequest.setDeleteRenew(null);
 							}
 												
 					}else{
@@ -279,7 +279,7 @@ public class ConnectionServiceImpl implements ConnectionService{
 						
 						String acceptingCloudParent = EntityUtil.getGuardianCloudNumber(acceptingCloudNumber);
 						
-						if(deleted != null && deleted.equals(Deleted.RENEWED_BY_ACCEPTOR.getDeleted())){
+						if(deleteRenew != null && deleteRenew.equals(DeleteRenew.RENEWED_BY_ACCEPTOR.getDeleteRenew())){
 							
 							newStatus = Status.APPROVED.getStatus();
 							newApprover = null;
@@ -385,19 +385,19 @@ public class ConnectionServiceImpl implements ConnectionService{
 					boolean isApproved1 = false;
 					boolean isApproved2 = false;
 					
-					String deleted = connectionRequest.getDeleted();
+					String deleteRenew = connectionRequest.getDeleteRenew();
 					String status = connectionRequest.getStatus();
 					boolean isApprovalRequired = false;														
 					
 					
 					if (collection.contains(connectionRequest.getConnectingClouds().getRequestingCloudNumber().toString())){
 												
-						if(deleted != null && deleted.equals(Deleted.DELETED_BY_REQUESTER.getDeleted())){
+						if(deleteRenew != null && deleteRenew.equals(DeleteRenew.DELETED_BY_REQUESTER.getDeleteRenew())){
 							LOGGER.debug("Do not add connection request to view list if connection request is deleted by requester");
 							continue;
 						}
 						
-						if(deleted != null && deleted.equals(Deleted.RENEWED_BY_REQUESTER.getDeleted())){
+						if(deleteRenew != null && deleteRenew.equals(DeleteRenew.RENEWED_BY_REQUESTER.getDeleteRenew())){
 							isApprovalRequired = true;
 						}
 						child1 = XDIAddress.create(connectionRequest.getConnectingClouds().getRequestingCloudNumber());
@@ -415,17 +415,17 @@ public class ConnectionServiceImpl implements ConnectionService{
 						}
 					}else{
 						
-						if(deleted != null && deleted.equals(Deleted.DELETED_BY_ACCEPTOR.getDeleted())){
+						if(deleteRenew != null && deleteRenew.equals(DeleteRenew.DELETED_BY_ACCEPTOR.getDeleteRenew())){
 							LOGGER.debug("Do not add connection request to view list if connection request is deleted by acceptor");
 							continue;
 						}
 						
-						if(status.equals(Status.NEW.getStatus()) && deleted == null){
+						if(status.equals(Status.NEW.getStatus()) && deleteRenew == null){
 							LOGGER.debug("Do not add connection request to view list if connection request has not been approved by requester guardian");
 							continue;
 						}
 						
-						if(deleted != null && deleted.equals(Deleted.RENEWED_BY_ACCEPTOR.getDeleted())){
+						if(deleteRenew != null && deleteRenew.equals(DeleteRenew.RENEWED_BY_ACCEPTOR.getDeleteRenew())){
 							isApprovalRequired = true;
 						}
 						
@@ -447,11 +447,11 @@ public class ConnectionServiceImpl implements ConnectionService{
 					}
 						
 					if(status.equals(Status.APPROVED.getStatus())){
-						if(deleted != null && !deleted.equals(Deleted.RENEWED_BY_REQUESTER.getDeleted())){
+						if(deleteRenew != null && !deleteRenew.equals(DeleteRenew.RENEWED_BY_REQUESTER.getDeleteRenew())){
 							
 							isApproved1 = true;
 							
-						}else if(deleted != null && !deleted.equals(Deleted.RENEWED_BY_REQUESTER.getDeleted())){
+						}else if(deleteRenew != null && !deleteRenew.equals(DeleteRenew.RENEWED_BY_REQUESTER.getDeleteRenew())){
 							
 							isApproved2 = true;
 						}
@@ -528,12 +528,12 @@ public class ConnectionServiceImpl implements ConnectionService{
 					boolean isApproved1 = false;
 					boolean isApproved2 = false;
 					
-					String deleted = connectionRequest.getDeleted();
+					String deleteRenew = connectionRequest.getDeleteRenew();
 					String status = connectionRequest.getStatus();
 					
 					if (cloudNumber.equals(connectionRequest.getConnectingClouds().getRequestingCloudNumber().toString())){
 						
-						if(deleted !=null && deleted.equals(Deleted.DELETED_BY_REQUESTER.getDeleted())){
+						if(deleteRenew !=null && deleteRenew.equals(DeleteRenew.DELETED_BY_REQUESTER.getDeleteRenew())){
 							LOGGER.debug("Do not add connection request to view list if connection request is deleted by requester");
 							continue;
 						}
@@ -556,7 +556,7 @@ public class ConnectionServiceImpl implements ConnectionService{
 						
 					}else{
 						
-						if(deleted !=null && deleted.equals(Deleted.DELETED_BY_ACCEPTOR.getDeleted())){
+						if(deleteRenew !=null && deleteRenew.equals(DeleteRenew.DELETED_BY_ACCEPTOR.getDeleteRenew())){
 							LOGGER.debug("Do not add connection request to view list if connection request is deleted by acceptor");
 							continue;
 						}
@@ -686,18 +686,18 @@ public class ConnectionServiceImpl implements ConnectionService{
 					String status = connectionRequest.getStatus();
 					String requestingCloudNumber = connectionRequest.getConnectingClouds().getRequestingCloudNumber();
 					String acceptingCloudNumber = connectionRequest.getConnectingClouds().getAcceptingCloudNumber();
-					String deleted = connectionRequest.getDeleted();
+					String deleteRenew = connectionRequest.getDeleteRenew();
 										
 					String newStatus = null;
 					
 					if(requestingCloudNumber.equals(cloudNumber) || requestingCloudNumber.equals(cloud1CloudNumber)){
 						
-						if(deleted != null && deleted.equals(Deleted.DELETED_BY_REQUESTER.getDeleted())){
+						if(deleteRenew != null && deleteRenew.equals(DeleteRenew.DELETED_BY_REQUESTER.getDeleteRenew())){
 							
 							LOGGER.debug("Conenction request not found.");
 							throw new ChatValidationException(ChatErrors.CONNECTION_REQUEST_NOT_FOUND.getErrorCode(), ChatErrors.CONNECTION_REQUEST_NOT_FOUND.getErrorMessage());
 							
-						}else if(deleted != null && deleted.equals(Deleted.RENEWED_BY_REQUESTER.getDeleted())){
+						}else if(deleteRenew != null && deleteRenew.equals(DeleteRenew.RENEWED_BY_REQUESTER.getDeleteRenew())){
 							
 							LOGGER.debug("Connection can not be blocked until approved.");
 							throw new ChatValidationException(ChatErrors.APPROVE_THE_CONNECTION_FIRST.getErrorCode(),ChatErrors.APPROVE_THE_CONNECTION_FIRST.getErrorMessage());
@@ -722,12 +722,12 @@ public class ConnectionServiceImpl implements ConnectionService{
 
 					}else if(acceptingCloudNumber.equals(cloudNumber) || acceptingCloudNumber.equals(cloud1CloudNumber)){
 						
-						if(deleted != null && deleted.equals(Deleted.DELETED_BY_ACCEPTOR.getDeleted())){
+						if(deleteRenew != null && deleteRenew.equals(DeleteRenew.DELETED_BY_ACCEPTOR.getDeleteRenew())){
 							
 							LOGGER.debug("Conenction request not found.");
 							throw new ChatValidationException(ChatErrors.CONNECTION_REQUEST_NOT_FOUND.getErrorCode(), ChatErrors.CONNECTION_REQUEST_NOT_FOUND.getErrorMessage());
 							
-						}else if(deleted != null && deleted.equals(Deleted.RENEWED_BY_ACCEPTOR.getDeleted())){
+						}else if(deleteRenew != null && deleteRenew.equals(DeleteRenew.RENEWED_BY_ACCEPTOR.getDeleteRenew())){
 							
 							LOGGER.debug("Connection can not be blocked until approved.");
 							throw new ChatValidationException(ChatErrors.APPROVE_THE_CONNECTION_FIRST.getErrorCode(), ChatErrors.APPROVE_THE_CONNECTION_FIRST.getErrorMessage());
@@ -824,12 +824,12 @@ public class ConnectionServiceImpl implements ConnectionService{
 					String status = connectionRequest.getStatus();
 					String requestingCloudNumber = connectionRequest.getConnectingClouds().getRequestingCloudNumber();
 					String acceptingCloudNumber = connectionRequest.getConnectingClouds().getAcceptingCloudNumber();
-					String deleted = connectionRequest.getDeleted();
+					String deleteRenew = connectionRequest.getDeleteRenew();
 
 					String newStatus = null;
 					if(requestingCloudNumber.equals(cloudNumber) || requestingCloudNumber.equals(cloud1CloudNumber)){
 
-						if(deleted != null && deleted.equals(Deleted.DELETED_BY_REQUESTER.getDeleted())){
+						if(deleteRenew != null && deleteRenew.equals(DeleteRenew.DELETED_BY_REQUESTER.getDeleteRenew())){
 							
 							LOGGER.debug("Conenction request not found.");
 							throw new ChatValidationException(ChatErrors.CONNECTION_REQUEST_NOT_FOUND.getErrorCode(), ChatErrors.CONNECTION_REQUEST_NOT_FOUND.getErrorMessage());
@@ -849,7 +849,7 @@ public class ConnectionServiceImpl implements ConnectionService{
 						}
 					}else if(acceptingCloudNumber.equals(cloudNumber) || acceptingCloudNumber.equals(cloud1CloudNumber)){
 
-						if(deleted != null && deleted.equals(Deleted.DELETED_BY_ACCEPTOR.getDeleted())){
+						if(deleteRenew != null && deleteRenew.equals(DeleteRenew.DELETED_BY_ACCEPTOR.getDeleteRenew())){
 							LOGGER.debug("Conenction request not found.");
 							throw new ChatValidationException(ChatErrors.CONNECTION_REQUEST_NOT_FOUND.getErrorCode(), ChatErrors.CONNECTION_REQUEST_NOT_FOUND.getErrorMessage());
 						}
@@ -930,24 +930,24 @@ public class ConnectionServiceImpl implements ConnectionService{
 					ConnectionRequest connectionRequest = (ConnectionRequest)obj;
 
 					String status = connectionRequest.getStatus();
-					String deleted = connectionRequest.getDeleted();
+					String deleteRenew = connectionRequest.getDeleteRenew();
 					String requestingCloudNumber = connectionRequest.getConnectingClouds().getRequestingCloudNumber().toString();
 					String acceptingCloudNumber = connectionRequest.getConnectingClouds().getAcceptingCloudNumber().toString();										
 					
 					if(status.equals(Status.APPROVED.getStatus()) || status.equals(Status.BLOCKED.getStatus()) || status.equals(Status.BLOCKED_BY_REQUESTER.getStatus()) || status.equals(Status.BLOCKED_BY_ACCEPTOR.getStatus())){
 						if(requestingCloudNumber.equals(cloudNumber) || requestingCloudNumber.equals(cloud1CloudNumber)){														
 
-							if(deleted==null || deleted.equals("")){
+							if(deleteRenew==null || deleteRenew.equals("")){
 								
 								LOGGER.debug("Deleting connection request by reuquester");
-								connectionRequest.setDeleted(Deleted.DELETED_BY_REQUESTER.getDeleted());
+								connectionRequest.setDeleteRenew(DeleteRenew.DELETED_BY_REQUESTER.getDeleteRenew());
 								connectionRequestDAO.updateRequest(connectionRequest);
 								
-							}else if(deleted.equals(Deleted.DELETED_BY_ACCEPTOR.getDeleted())){
+							}else if(deleteRenew.equals(DeleteRenew.DELETED_BY_ACCEPTOR.getDeleteRenew())){
 								
 								LOGGER.debug("Deleteing connection reuest from DB");
 								connectionRequestDAO.deleteRequest(connectionRequest);								
-							}else if (deleted != null && deleted.equals(Deleted.RENEWED_BY_ACCEPTOR.getDeleted())){
+							}else if (deleteRenew != null && deleteRenew.equals(DeleteRenew.RENEWED_BY_ACCEPTOR.getDeleteRenew())){
 							
 								String preReqConnectionName = connectionRequest.getRequestingConnectionName();
 								String preAccConnectionName = connectionRequest.getAcceptingConnectionName();
@@ -961,7 +961,7 @@ public class ConnectionServiceImpl implements ConnectionService{
 								connectionRequest.setRequestingConnectionName(preAccConnectionName);
 								connectionRequest.setAcceptingConnectionName(preReqConnectionName);
 								connectionRequest.setStatus(Status.NEW.getStatus());
-								connectionRequest.setDeleted(null);
+								connectionRequest.setDeleteRenew(null);
 																
 								connectionRequestDAO.requestConnection(connectionRequest);
 							}else{
@@ -972,21 +972,21 @@ public class ConnectionServiceImpl implements ConnectionService{
 
 						}else if(acceptingCloudNumber.equals(cloudNumber) || acceptingCloudNumber.equals(cloud1CloudNumber)){
 														
-							if(deleted==null || deleted.equals("")){
+							if(deleteRenew==null || deleteRenew.equals("")){
 								
 								LOGGER.debug("Deleting connection request by acceptor");
-								connectionRequest.setDeleted(Deleted.DELETED_BY_ACCEPTOR.getDeleted());
+								connectionRequest.setDeleteRenew(DeleteRenew.DELETED_BY_ACCEPTOR.getDeleteRenew());
 								connectionRequestDAO.updateRequest(connectionRequest);	
 								
-							}else if(deleted != null && deleted.equals(Deleted.DELETED_BY_REQUESTER.getDeleted())){
+							}else if(deleteRenew != null && deleteRenew.equals(DeleteRenew.DELETED_BY_REQUESTER.getDeleteRenew())){
 								
 								LOGGER.debug("Deleteing connection reuest from DB");
 								connectionRequestDAO.deleteRequest(connectionRequest);								
-							}else if (deleted != null && deleted.equals(Deleted.RENEWED_BY_REQUESTER.getDeleted())){
+							}else if (deleteRenew != null && deleteRenew.equals(DeleteRenew.RENEWED_BY_REQUESTER.getDeleteRenew())){
 											
 								connectionRequest.setApprovingCloudNumber(EntityUtil.getGuardianCloudNumber(requestingCloudNumber));
 								connectionRequest.setStatus(Status.NEW.getStatus());
-								connectionRequest.setDeleted(null);
+								connectionRequest.setDeleteRenew(null);
 																
 								connectionRequestDAO.updateRequest(connectionRequest);
 							}else{
@@ -1051,7 +1051,7 @@ public class ConnectionServiceImpl implements ConnectionService{
 			boolean approved2 = false;
 			boolean blocked2 = false;
 			
-			if(connectionRequest.getDeleted() == null || connectionRequest.getDeleted().equals("")){
+			if(connectionRequest.getDeleteRenew() == null || connectionRequest.getDeleteRenew().equals("")){
 				
 				String status = connectionRequest.getStatus();
 				if(status.equals(Status.APPROVED.getStatus())){

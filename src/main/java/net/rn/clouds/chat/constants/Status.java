@@ -9,13 +9,13 @@ package net.rn.clouds.chat.constants;
  */
 public enum Status {
 	
-	NEW("new"), 
-	CLOUD_APPROVAL_PENDING("cloudApprovalPending"),
-	CHILD_APPROVAL_PENDING("childApprovalPending"),
-	APPROVED("approved"),
-	BLOCKED_BY_REQUESTER("blockedByRequester"),
-	BLOCKED_BY_ACCEPTOR("blockedByAcceptor"),
-	BLOCKED("blocked");
+	NEW("NEW"), 
+	CLOUD_APPROVAL_PENDING("CLOUD_APPROVAL_PENDING"),
+	CHILD_APPROVAL_PENDING("CHILD_APPROVAL_PENDING"),
+	APPROVED("APPROVED"),
+	BLOCKED_BY_REQUESTER("BLOCKED_BY_REQUESTER"),
+	BLOCKED_BY_ACCEPTOR("BLOCKED_BY_ACCEPTOR"),
+	BLOCKED("BLOCKED");
 	
 	private String status;
 	
