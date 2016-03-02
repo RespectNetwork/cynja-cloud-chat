@@ -90,6 +90,12 @@ public class ConnectionServiceImpl implements ConnectionService{
 		
 		LOGGER.debug("Enter requestConnection with requestingCloud: {}, acceptingCloud: {}", cloud1, cloud2);
 		try {
+			
+			if(cloud1.toString().equals(cloud2.toString())){
+				
+				LOGGER.debug("Invalid connection requested between {} and {}",cloud1.toString(), cloud2.toString());
+				throw new ChatValidationException(ChatErrors.INVALID_CONNECTION_REQUEST.getErrorCode(), ChatErrors.INVALID_CONNECTION_REQUEST.getErrorMessage());
+			}
 						  
 			XDIDiscoveryResult cloud1Discovery = authenticate(cloud1, cloud1SecretToken);
 			XDIDiscoveryResult cloud2Discovery = getXDIDiscovery(cloud2);
@@ -141,7 +147,7 @@ public class ConnectionServiceImpl implements ConnectionService{
 							
 							LOGGER.debug("Raise a request to parent to revert the deletion ");
 							if(requestingCloudNumber.equals(cloud1Number)){ 
-																
+
 								connectionRequest.setDeleteRenew(DeleteRenew.RENEWED_BY_REQUESTER.getDeleteRenew());
 								
 							}else if(acceptingCloudNumber.equals(cloud1Number)){
@@ -413,6 +419,12 @@ public class ConnectionServiceImpl implements ConnectionService{
 							isBlocked2 = true;
 							isApproved1 = true;
 						}
+						
+						if(status.equals(Status.APPROVED.getStatus()) && deleteRenew != null && 
+								!deleteRenew.equals(DeleteRenew.RENEWED_BY_REQUESTER.getDeleteRenew())){
+							
+							isApproved1 = true;							
+						}
 					}else{
 						
 						if(deleteRenew != null && deleteRenew.equals(DeleteRenew.DELETED_BY_ACCEPTOR.getDeleteRenew())){
@@ -444,17 +456,17 @@ public class ConnectionServiceImpl implements ConnectionService{
 							isBlocked2 = true;
 							isApproved1 = true;
 						}
+						if(status.equals(Status.APPROVED.getStatus()) && deleteRenew != null && 
+								!deleteRenew.equals(DeleteRenew.RENEWED_BY_ACCEPTOR.getDeleteRenew())){
+								
+								isApproved1 = true;
+							}
 					}
 						
-					if(status.equals(Status.APPROVED.getStatus())){
-						if(deleteRenew != null && !deleteRenew.equals(DeleteRenew.RENEWED_BY_REQUESTER.getDeleteRenew())){
+					if(status.equals(Status.APPROVED.getStatus()) && deleteRenew == null){						
 							
-							isApproved1 = true;
-							
-						}else if(deleteRenew != null && !deleteRenew.equals(DeleteRenew.RENEWED_BY_REQUESTER.getDeleteRenew())){
-							
-							isApproved2 = true;
-						}
+						isApproved1 = true;
+						isApproved2 = true;						
 					}
 									
 					if(connectionRequest.getApprovingCloudNumber() != null && 
@@ -553,6 +565,11 @@ public class ConnectionServiceImpl implements ConnectionService{
 							isBlocked2 = true;
 							isApproved1 = true;
 						}
+						if(status.equals(Status.APPROVED.getStatus()) && deleteRenew != null && 
+								!deleteRenew.equals(DeleteRenew.RENEWED_BY_REQUESTER.getDeleteRenew())){
+							
+							isApproved1 = true;							
+						}	
 						
 					}else{
 						
@@ -580,11 +597,19 @@ public class ConnectionServiceImpl implements ConnectionService{
 							isBlocked2 = true;
 							isApproved1 = true;
 						}
+						
+
+						else if(status.equals(Status.APPROVED.getStatus()) && deleteRenew != null && 
+								!deleteRenew.equals(DeleteRenew.RENEWED_BY_ACCEPTOR.getDeleteRenew())){
+							
+							isApproved1 = true;
+						}
 					}
 																				
-					if(status.equals(Status.APPROVED.getStatus())){
+					if(status.equals(Status.APPROVED.getStatus()) && deleteRenew == null){
+													
 						isApproved1 = true;
-						isApproved2 = true;
+						isApproved2 = true;					
 					}
 							
 					boolean isApprovalRequired = false;

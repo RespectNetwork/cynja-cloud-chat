@@ -18,7 +18,8 @@ public enum ChatErrors {
     ACTION_ALREADY_PERFORMED(9006, "This action is already performed."),
     UNAUTHORIZED_ACTION(9007,"You are not authorized to perform the action."),
     APPROVE_THE_CONNECTION_FIRST(9008,"You can not perform the action until the request is approved."),
-    BLOCK_THE_CONNECTION_FIRST(9009,"You can not unblock until the request is blocked. ");
+    BLOCK_THE_CONNECTION_FIRST(9009,"You can not unblock until the request is blocked."),
+    INVALID_CONNECTION_REQUEST(9010,"This connection request is invalid.");
 	
 	/**
      * Error code.
