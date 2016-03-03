@@ -43,18 +43,19 @@ public class ConnectionServiceImpl implements ConnectionService{
 	
 	private XDIDiscoveryResult getXDIDiscovery(XDIAddress cloud){
 		
-		LOGGER.debug("Getting discovery of cloud1: {}", cloud.toString());
+		LOGGER.debug("Getting discovery of cloud: {}", cloud.toString());
 		if(cloud != null){
 			try{
 				XDIDiscoveryResult cloudDiscovery = InitFilter.XDI_DISCOVERY_CLIENT.discoverFromRegistry(cloud, null);
 				if (cloudDiscovery == null|| cloudDiscovery.toString().equals("null (null)")){
 
-					LOGGER.debug("{} not found", cloud.toString());
+					LOGGER.error("{} not found", cloud.toString());
 					throw new ChatValidationException(ChatErrors.CLOUD_NOT_FOUND.getErrorCode(), cloud.toString()+ChatErrors.CLOUD_NOT_FOUND.getErrorMessage());
 				}
 				return cloudDiscovery;
 			}catch(Xdi2ClientException clientExcption){
 				
+				LOGGER.error("Error while discovery of cloud: {}",clientExcption);
 				throw new ChatValidationException(ChatErrors.CLOUD_NOT_FOUND.getErrorCode(), cloud.toString()+ChatErrors.CLOUD_NOT_FOUND.getErrorMessage());
 			}
 		}
@@ -71,11 +72,13 @@ public class ConnectionServiceImpl implements ConnectionService{
 
 			if (cloudPrivateKey == null){
 
-				LOGGER.debug("{} private key not found", cloud.toString());
+				LOGGER.error("{} private key not found", cloud.toString());
 				throw new ChatValidationException(ChatErrors.AUTHENTICATOION_FAILED.getErrorCode(), ChatErrors.AUTHENTICATOION_FAILED.getErrorMessage()+cloud.toString());
 			}
 		}
-		catch(Xdi2ClientException | GeneralSecurityException ex){		
+		catch(Xdi2ClientException | GeneralSecurityException ex){
+			
+			LOGGER.error("Error while authenticating cloud: {}", ex);
 			throw new ChatValidationException(ChatErrors.AUTHENTICATOION_FAILED.getErrorCode(), ChatErrors.AUTHENTICATOION_FAILED.getErrorMessage()+cloud.toString());			
 		}
 				
@@ -196,12 +199,12 @@ public class ConnectionServiceImpl implements ConnectionService{
 			}
 		}catch (ChatValidationException chatException) {
 
-			LOGGER.error("Error while requesting connection: {}", chatException.getMessage());
+			LOGGER.error("Error while requesting connection: {}", chatException);
 			throw chatException;
 			
 		}catch (Exception ex) {
 
-			LOGGER.error("Error while requesting connection: {}", ex.getMessage());
+			LOGGER.error("Error while requesting connection: {}", ex);
 			throw new ChatSystemException(ChatErrors.SYSTEM_ERROR.getErrorCode(),ChatErrors.SYSTEM_ERROR.getErrorMessage());
 		}
 		LOGGER.debug("Exit requestConnection with cloud1: {}, cloud2: {}", cloud1, cloud2);				
@@ -328,12 +331,12 @@ public class ConnectionServiceImpl implements ConnectionService{
 			}													
 		}catch (ChatValidationException chatException) {
 
-			LOGGER.error("Error while approving connection: {}", chatException.getMessage());
+			LOGGER.error("Error while approving connection: {}", chatException);
 			throw chatException;
 			
 		}catch (Exception ex) {
 
-			LOGGER.error("Error while approving connection: {}", ex.getMessage());
+			LOGGER.error("Error while approving connection: {}", ex);
 			throw new ChatSystemException(ChatErrors.SYSTEM_ERROR.getErrorCode(),ChatErrors.SYSTEM_ERROR.getErrorMessage());
 		}
 		
@@ -483,11 +486,11 @@ public class ConnectionServiceImpl implements ConnectionService{
 			
 		}catch (ChatValidationException chatException) {
 
-			LOGGER.error("Error while viewing connection as parent: {}", chatException.getMessage());
+			LOGGER.error("Error while viewing connection as parent: {}", chatException);
 			throw chatException;
 		}catch (Exception ex) {
 
-			LOGGER.error("Error while viewing connection as parent: {}", ex.getMessage());
+			LOGGER.error("Error while viewing connection as parent: {}", ex);
 			throw new ChatSystemException(ChatErrors.SYSTEM_ERROR.getErrorCode(),ChatErrors.SYSTEM_ERROR.getErrorMessage());
 		}
 		
@@ -624,11 +627,11 @@ public class ConnectionServiceImpl implements ConnectionService{
 			}					
 		}catch (ChatValidationException chatException) {
 
-			LOGGER.error("Error while viewing connection as cloud: {}", chatException.getMessage());
+			LOGGER.error("Error while viewing connection as cloud: {}", chatException);
 			throw chatException;
 		}catch (Exception ex) {
 
-			LOGGER.error("Error while viewing connection as cloud: {}", ex.getMessage());
+			LOGGER.error("Error while viewing connection as cloud: {}", ex);
 			throw new ChatSystemException(ChatErrors.SYSTEM_ERROR.getErrorCode(),ChatErrors.SYSTEM_ERROR.getErrorMessage());
 		}
 		
@@ -661,11 +664,11 @@ public class ConnectionServiceImpl implements ConnectionService{
 		
 		}catch (ChatValidationException chatException) {
 
-			LOGGER.error("Error while viewing connection logs");
+			LOGGER.error("Error while viewing connection logs: {}", chatException);
 			throw chatException;
 		}catch (Exception ex) {
 
-			LOGGER.error("Error while viewing connection logs");
+			LOGGER.error("Error while viewing connection logs: {}", ex);
 			throw new ChatSystemException(ChatErrors.SYSTEM_ERROR.getErrorCode(),ChatErrors.SYSTEM_ERROR.getErrorMessage());
 		}				
 	}
@@ -787,11 +790,11 @@ public class ConnectionServiceImpl implements ConnectionService{
 			
 		}catch (ChatValidationException chatException) {
 
-			LOGGER.error("Error while blocking connection: {}",chatException.getMessage());
+			LOGGER.error("Error while blocking connection: {}",chatException);
 			throw chatException;
 		}catch (Exception ex) {
 
-			LOGGER.error("Error while blocking connection: {}",ex.getMessage());
+			LOGGER.error("Error while blocking connection: {}",ex);
 			throw new ChatSystemException(ChatErrors.SYSTEM_ERROR.getErrorCode(),ChatErrors.SYSTEM_ERROR.getErrorMessage());
 		}
 		
@@ -903,12 +906,12 @@ public class ConnectionServiceImpl implements ConnectionService{
 			
 		}catch (ChatValidationException chatException) {
 
-			LOGGER.error("Error while unblocking connection: {}",chatException.getMessage());
+			LOGGER.error("Error while unblocking connection: {}",chatException);
 			throw chatException;
 			
 		}catch (Exception ex) {
 
-			LOGGER.error("Error while unblocking connection: {}",ex.getMessage());
+			LOGGER.error("Error while unblocking connection: {}",ex);
 			throw new ChatSystemException(ChatErrors.SYSTEM_ERROR.getErrorCode(),ChatErrors.SYSTEM_ERROR.getErrorMessage());
 		}
 		LOGGER.debug("Exit unblockConnection with cloud: {}, cloud1: {}, cloud2: {}", cloud, cloud1, cloud2);		
@@ -1029,11 +1032,11 @@ public class ConnectionServiceImpl implements ConnectionService{
 			}						
 		}catch (ChatValidationException chatException) {
 
-			LOGGER.error("Error while deleting connection: {}",chatException.getMessage());
+			LOGGER.error("Error while deleting connection: {}",chatException);
 			throw chatException;
 		}catch (Exception ex) {
 
-			LOGGER.error("Error while deleting connection: {}",ex.getMessage());
+			LOGGER.error("Error while deleting connection: {}",ex);
 			throw new ChatSystemException(ChatErrors.SYSTEM_ERROR.getErrorCode(),ChatErrors.SYSTEM_ERROR.getErrorMessage());
 		}
 		
@@ -1122,11 +1125,11 @@ public class ConnectionServiceImpl implements ConnectionService{
 			
 		}catch (ChatValidationException chatException) {
 
-			LOGGER.error("Error while finding connection: {}",chatException.getMessage());
+			LOGGER.error("Error while finding connection: {}",chatException);
 			throw chatException;
 		}catch (Exception ex) {
 
-			LOGGER.error("Error while finding connection: {}",ex.getMessage());
+			LOGGER.error("Error while finding connection: {}",ex);
 			throw new ChatSystemException(ChatErrors.SYSTEM_ERROR.getErrorCode(),ChatErrors.SYSTEM_ERROR.getErrorMessage());
 		}
 		return connection;		
