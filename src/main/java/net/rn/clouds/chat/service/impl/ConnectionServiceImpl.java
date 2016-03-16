@@ -377,7 +377,8 @@ public class ConnectionServiceImpl implements ConnectionService{
 				return new ConnectionImpl[0];				
 			}
 			
-			connection = new ConnectionImpl[connectionRequestList.size()];
+			int size = (collection.size() * collection.size())+connectionRequestList.size();
+			connection = new ConnectionImpl[size];
 			int clounter = 0;
 			
 			for (Object obj : connectionRequestList) {
@@ -398,6 +399,17 @@ public class ConnectionServiceImpl implements ConnectionService{
 					String status = connectionRequest.getStatus();
 					boolean isApprovalRequired = false;														
 					
+					if(status.equals(Status.APPROVED.getStatus()) && deleteRenew == null){
+						
+						isApproved1 = true;
+						isApproved2 = true;						
+					}
+									
+					if(connectionRequest.getApprovingCloudNumber() != null && 
+							connectionRequest.getApprovingCloudNumber().equals(parentDiscovery.getCloudNumber().toString())){
+						
+						isApprovalRequired = true;
+					}
 					
 					if (collection.contains(connectionRequest.getConnectingClouds().getRequestingCloudNumber().toString())){
 												
@@ -428,7 +440,13 @@ public class ConnectionServiceImpl implements ConnectionService{
 							
 							isApproved1 = true;							
 						}
-					}else{
+						
+						LOGGER.debug("Adding connection request to view list");
+						
+						connection[clounter++] = new ConnectionImpl(child1, child2, isApprovalRequired, isApproved1, 
+								isApproved2, isBlocked1, isBlocked2, connectionName);
+						
+					}if (collection.contains(connectionRequest.getConnectingClouds().getAcceptingCloudNumber().toString())){
 						
 						if(deleteRenew != null && deleteRenew.equals(DeleteRenew.DELETED_BY_ACCEPTOR.getDeleteRenew())){
 							LOGGER.debug("Do not add connection request to view list if connection request is deleted by acceptor");
@@ -463,24 +481,14 @@ public class ConnectionServiceImpl implements ConnectionService{
 								!deleteRenew.equals(DeleteRenew.RENEWED_BY_ACCEPTOR.getDeleteRenew())){
 								
 								isApproved1 = true;
-							}
-					}
+						}
 						
-					if(status.equals(Status.APPROVED.getStatus()) && deleteRenew == null){						
-							
-						isApproved1 = true;
-						isApproved2 = true;						
-					}
-									
-					if(connectionRequest.getApprovingCloudNumber() != null && 
-							connectionRequest.getApprovingCloudNumber().equals(parentDiscovery.getCloudNumber().toString())){
-						isApprovalRequired = true;
-					}		
-					
-					LOGGER.debug("Adding connection request to view list");
-					
-					connection[clounter++] = new ConnectionImpl(child1, child2, isApprovalRequired, isApproved1, 
-							isApproved2, isBlocked1, isBlocked2, connectionName);
+						LOGGER.debug("Adding connection request to view list");
+						
+						connection[clounter++] = new ConnectionImpl(child1, child2, isApprovalRequired, isApproved1, 
+								isApproved2, isBlocked1, isBlocked2, connectionName);
+						
+					}																							
 				}					
 			}				
 			
@@ -1072,45 +1080,61 @@ public class ConnectionServiceImpl implements ConnectionService{
 									
 			ConnectionRequest connectionRequest = (ConnectionRequest)connectionRequestList.get(0);
 			
+			String status = connectionRequest.getStatus();
+			String deleteRenew = connectionRequest.getDeleteRenew();
+
 			boolean isApprovalReq = false;
-			boolean approved1 = false;
+			boolean approved1 = true;
 			boolean blocked1 = false;
-			
-			boolean approved2 = false;
+			boolean approved2 = true;
 			boolean blocked2 = false;
-			
-			if(connectionRequest.getDeleteRenew() == null || connectionRequest.getDeleteRenew().equals("")){
+
+			if(status.equals(Status.BLOCKED.getStatus())){
 				
-				String status = connectionRequest.getStatus();
-				if(status.equals(Status.APPROVED.getStatus())){
-					
-					approved1 = true;
-					approved2 = true;
-					
-				}else if(status.equals(Status.BLOCKED.getStatus())){
-					blocked1 = true;
-					blocked2 = true;
-						
-				}else if(status.equals(Status.BLOCKED_BY_REQUESTER.getStatus())){
-					
-					if(cloudNumber1.equals(connectionRequest.getConnectingClouds().getRequestingCloudNumber())){
-						
-						blocked1 = true;
-						approved2 = true;																	
-					}else{				
-						blocked2 = true;
-						approved1 = true;
-					}
-				}else if(status.equals(Status.BLOCKED_BY_ACCEPTOR.getStatus())){
-					
-					if(cloudNumber1.equals(connectionRequest.getConnectingClouds().getAcceptingCloudNumber())){
-						
-						blocked2 = true;
-						approved1 = true;
+				blocked1 = true;
+				blocked2 = true;
+			}
+
+			if(status.equals(Status.NEW.getStatus()) || status.equals(Status.CLOUD_APPROVAL_PENDING.getStatus())
+					|| status.equals(Status.CHILD_APPROVAL_PENDING.getStatus())){
+
+				approved1 = false;
+				approved2 = false;
+			}
+
+
+			if(cloudNumber1.equals(connectionRequest.getConnectingClouds().getRequestingCloudNumber())){
+
+				if(deleteRenew != null){
+
+					if(deleteRenew.equals(DeleteRenew.DELETED_BY_REQUESTER.getDeleteRenew()) 
+							|| deleteRenew.equals(DeleteRenew.RENEWED_BY_REQUESTER.getDeleteRenew())){						
+						return null;
 					}else{
-						blocked1 = true;
-						approved2 = true;
-					}					
+						approved2 = false;
+					}
+				}
+
+				if(status.equals(Status.BLOCKED_BY_REQUESTER.getStatus())){
+					blocked1 = true;
+				}else if(status.equals(Status.BLOCKED_BY_ACCEPTOR.getStatus())){
+					blocked2 = true;
+				}
+			}else if(cloudNumber1.equals(connectionRequest.getConnectingClouds().getAcceptingCloudNumber())){
+
+				if(deleteRenew != null){
+					if(deleteRenew.equals(DeleteRenew.DELETED_BY_ACCEPTOR.getDeleteRenew()) 
+							|| deleteRenew.equals(DeleteRenew.DELETED_BY_ACCEPTOR.getDeleteRenew())){						
+						return null;
+					}else{
+						approved2 = false;
+					}
+				}
+
+				if(status.equals(Status.BLOCKED_BY_ACCEPTOR.getStatus())){
+					blocked1 = true;
+				}else if(status.equals(Status.BLOCKED_BY_REQUESTER.getStatus())){
+					blocked2 = true;
 				}
 			}
 			

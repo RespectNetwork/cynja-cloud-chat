@@ -74,6 +74,13 @@ public class WebSocketEndpoint extends javax.websocket.Endpoint {
 
 		for (WebSocketMessageHandler webSocketMessageHandler : WEBSOCKETMESSAGEHANDLERS) {
 
+			if (fromWebSocketMessageHandler.getChild2().equals(webSocketMessageHandler.getChild1())){
+
+				if(fromWebSocketMessageHandler.getConnection().isBlocked2() || !fromWebSocketMessageHandler.getConnection().isApproved2()){
+					continue;
+				}
+			}
+
 			if ((fromWebSocketMessageHandler.getChild1().equals(webSocketMessageHandler.getChild2()) &&
 					fromWebSocketMessageHandler.getChild2().equals(webSocketMessageHandler.getChild1())) || (
 							fromWebSocketMessageHandler.getChild1().equals(webSocketMessageHandler.getChild1()) &&
@@ -124,13 +131,13 @@ public class WebSocketEndpoint extends javax.websocket.Endpoint {
 				return;
 			}
 
-			if (! Boolean.TRUE.equals(connection.isApproved1()) || ! Boolean.TRUE.equals(connection.isApproved2())) {
+			if (! Boolean.TRUE.equals(connection.isApproved1())){
 
 				session.close(new CloseReason(CloseCodes.VIOLATED_POLICY, "Connection is not approved yet."));
 				return;
 			}
 
-			if (Boolean.TRUE.equals(connection.isBlocked1()) || Boolean.TRUE.equals(connection.isBlocked2())) {
+			if (Boolean.TRUE.equals(connection.isBlocked1())){
 
 				session.close(new CloseReason(CloseCodes.VIOLATED_POLICY, "Connection is temporarily blocked."));
 				return;
