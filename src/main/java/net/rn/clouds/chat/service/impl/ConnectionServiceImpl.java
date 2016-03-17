@@ -155,8 +155,9 @@ public class ConnectionServiceImpl implements ConnectionService{
 								
 							}else if(acceptingCloudNumber.equals(cloud1Number)){
 																
-								connectionRequest.setDeleteRenew(DeleteRenew.RENEWED_BY_ACCEPTOR.getDeleteRenew());								
-							}														
+								connectionRequest.setDeleteRenew(DeleteRenew.RENEWED_BY_ACCEPTOR.getDeleteRenew());									
+							}
+							connectionRequest.setApprovingCloudNumber(cloudParent);
 						}
 						connectionRequestDAO.updateRequest(connectionRequest);						
 					}
@@ -970,72 +971,75 @@ public class ConnectionServiceImpl implements ConnectionService{
 					String requestingCloudNumber = connectionRequest.getConnectingClouds().getRequestingCloudNumber().toString();
 					String acceptingCloudNumber = connectionRequest.getConnectingClouds().getAcceptingCloudNumber().toString();										
 					
-					if(status.equals(Status.APPROVED.getStatus()) || status.equals(Status.BLOCKED.getStatus()) || status.equals(Status.BLOCKED_BY_REQUESTER.getStatus()) || status.equals(Status.BLOCKED_BY_ACCEPTOR.getStatus())){
-						if(requestingCloudNumber.equals(cloudNumber) || requestingCloudNumber.equals(cloud1CloudNumber)){														
-
-							if(deleteRenew==null || deleteRenew.equals("")){
-								
-								LOGGER.debug("Deleting connection request by reuquester");
-								connectionRequest.setDeleteRenew(DeleteRenew.DELETED_BY_REQUESTER.getDeleteRenew());
-								connectionRequestDAO.updateRequest(connectionRequest);
-								
-							}else if(deleteRenew.equals(DeleteRenew.DELETED_BY_ACCEPTOR.getDeleteRenew())){
-								
-								LOGGER.debug("Deleteing connection reuest from DB");
-								connectionRequestDAO.deleteRequest(connectionRequest);								
-							}else if (deleteRenew != null && deleteRenew.equals(DeleteRenew.RENEWED_BY_ACCEPTOR.getDeleteRenew())){
-							
-								String preReqConnectionName = connectionRequest.getRequestingConnectionName();
-								String preAccConnectionName = connectionRequest.getAcceptingConnectionName();
-								
-								connectionRequestDAO.deleteRequest(connectionRequest);
-								
-								ConnectingClouds connectingClouds = new ConnectingClouds(requestingCloudNumber, acceptingCloudNumber);
-								
-								connectionRequest.setConnectingClouds(connectingClouds);								
-								connectionRequest.setApprovingCloudNumber(EntityUtil.getGuardianCloudNumber(acceptingCloudNumber));
-								connectionRequest.setRequestingConnectionName(preAccConnectionName);
-								connectionRequest.setAcceptingConnectionName(preReqConnectionName);
-								connectionRequest.setStatus(Status.NEW.getStatus());
-								connectionRequest.setDeleteRenew(null);
-																
-								connectionRequestDAO.requestConnection(connectionRequest);
-							}else{
-								
-								LOGGER.debug("Connection is already deleted.");
-								throw new ChatValidationException(ChatErrors.ACTION_ALREADY_PERFORMED.getErrorCode(),ChatErrors.ACTION_ALREADY_PERFORMED.getErrorMessage());
-							}
-
-						}else if(acceptingCloudNumber.equals(cloudNumber) || acceptingCloudNumber.equals(cloud1CloudNumber)){
-														
-							if(deleteRenew==null || deleteRenew.equals("")){
-								
-								LOGGER.debug("Deleting connection request by acceptor");
-								connectionRequest.setDeleteRenew(DeleteRenew.DELETED_BY_ACCEPTOR.getDeleteRenew());
-								connectionRequestDAO.updateRequest(connectionRequest);	
-								
-							}else if(deleteRenew != null && deleteRenew.equals(DeleteRenew.DELETED_BY_REQUESTER.getDeleteRenew())){
-								
-								LOGGER.debug("Deleteing connection reuest from DB");
-								connectionRequestDAO.deleteRequest(connectionRequest);								
-							}else if (deleteRenew != null && deleteRenew.equals(DeleteRenew.RENEWED_BY_REQUESTER.getDeleteRenew())){
-											
-								connectionRequest.setApprovingCloudNumber(EntityUtil.getGuardianCloudNumber(requestingCloudNumber));
-								connectionRequest.setStatus(Status.NEW.getStatus());
-								connectionRequest.setDeleteRenew(null);
-																
-								connectionRequestDAO.updateRequest(connectionRequest);
-							}else{
-								
-								LOGGER.debug("Connection Not found.");
-								throw new ChatValidationException(ChatErrors.CONNECTION_REQUEST_NOT_FOUND.getErrorCode(), ChatErrors.CONNECTION_REQUEST_NOT_FOUND.getErrorMessage());
-							}							
-						}												
-					}else{
+					if(status.equals(Status.NEW.getStatus()) || status.equals(Status.CLOUD_APPROVAL_PENDING.getStatus()) 
+							|| status.equals(Status.CHILD_APPROVAL_PENDING.getStatus())){
 						
-						LOGGER.debug("A connection can not be deleted until approved.");
-						throw new ChatValidationException(ChatErrors.APPROVE_THE_CONNECTION_FIRST.getErrorCode(), ChatErrors.APPROVE_THE_CONNECTION_FIRST.getErrorMessage());
-					}					
+						LOGGER.debug("Deleteing connection reuest from DB");
+						connectionRequestDAO.deleteRequest(connectionRequest);		
+						
+					}									
+					else if(requestingCloudNumber.equals(cloudNumber) || requestingCloudNumber.equals(cloud1CloudNumber)){														
+
+						if (deleteRenew != null && deleteRenew.equals(DeleteRenew.DELETED_BY_ACCEPTOR.getDeleteRenew())){
+
+							LOGGER.debug("Deleteing connection reuest from DB");
+							connectionRequestDAO.deleteRequest(connectionRequest);
+						}
+						if(deleteRenew==null || (deleteRenew != null && deleteRenew.equals(DeleteRenew.RENEWED_BY_REQUESTER.getDeleteRenew()))){
+
+							LOGGER.debug("Deleting connection request by reuquester");
+							connectionRequest.setDeleteRenew(DeleteRenew.DELETED_BY_REQUESTER.getDeleteRenew());
+							connectionRequestDAO.updateRequest(connectionRequest);
+
+						}else if (deleteRenew != null && (deleteRenew.equals(DeleteRenew.RENEWED_BY_ACCEPTOR.getDeleteRenew()))){
+
+							String preReqConnectionName = connectionRequest.getRequestingConnectionName();
+							String preAccConnectionName = connectionRequest.getAcceptingConnectionName();
+
+							connectionRequestDAO.deleteRequest(connectionRequest);
+
+							ConnectingClouds connectingClouds = new ConnectingClouds(acceptingCloudNumber, requestingCloudNumber);
+
+							connectionRequest.setConnectingClouds(connectingClouds);								
+							connectionRequest.setApprovingCloudNumber(EntityUtil.getGuardianCloudNumber(acceptingCloudNumber));
+							connectionRequest.setRequestingConnectionName(preAccConnectionName);
+							connectionRequest.setAcceptingConnectionName(preReqConnectionName);
+							connectionRequest.setStatus(Status.NEW.getStatus());
+							connectionRequest.setDeleteRenew(null);
+
+							connectionRequestDAO.requestConnection(connectionRequest);
+						}else{
+
+							LOGGER.debug("Connection Not found.");
+							throw new ChatValidationException(ChatErrors.CONNECTION_REQUEST_NOT_FOUND.getErrorCode(),ChatErrors.CONNECTION_REQUEST_NOT_FOUND.getErrorMessage());
+						}
+
+					}else if(acceptingCloudNumber.equals(cloudNumber) || acceptingCloudNumber.equals(cloud1CloudNumber)){
+
+						if(deleteRenew != null && deleteRenew.equals(DeleteRenew.DELETED_BY_REQUESTER.getDeleteRenew())){
+
+							LOGGER.debug("Deleteing connection reuest from DB");
+							connectionRequestDAO.deleteRequest(connectionRequest);
+							
+						}else if(deleteRenew==null || (deleteRenew != null && deleteRenew.equals(DeleteRenew.RENEWED_BY_ACCEPTOR.getDeleteRenew()))){
+
+							LOGGER.debug("Deleting connection request by acceptor");
+							connectionRequest.setDeleteRenew(DeleteRenew.DELETED_BY_ACCEPTOR.getDeleteRenew());
+							connectionRequestDAO.updateRequest(connectionRequest);	
+
+						}else if (deleteRenew != null && deleteRenew.equals(DeleteRenew.RENEWED_BY_REQUESTER.getDeleteRenew())){
+
+							connectionRequest.setApprovingCloudNumber(EntityUtil.getGuardianCloudNumber(requestingCloudNumber));
+							connectionRequest.setStatus(Status.NEW.getStatus());
+							connectionRequest.setDeleteRenew(null);
+
+							connectionRequestDAO.updateRequest(connectionRequest);
+						}else{
+
+							LOGGER.debug("Connection Not found.");
+							throw new ChatValidationException(ChatErrors.CONNECTION_REQUEST_NOT_FOUND.getErrorCode(), ChatErrors.CONNECTION_REQUEST_NOT_FOUND.getErrorMessage());
+						}							
+					}																		
 				}
 			}						
 		}catch (ChatValidationException chatException) {
