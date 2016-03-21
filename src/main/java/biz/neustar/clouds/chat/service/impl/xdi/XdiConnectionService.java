@@ -78,8 +78,8 @@ public class XdiConnectionService implements ConnectionService {
 					tempGraph1, 
 					child1Discovery.getCloudNumber().getXDIAddress(), 
 					child2Discovery.getCloudNumber().getXDIAddress(), 
-					null,
-					XDI_ARC_CHAT, 
+					XDI_ADD_CHAT,
+					null, 
 					true);
 
 			linkContract1.setPermissionTargetXDIAddress(
@@ -133,8 +133,8 @@ public class XdiConnectionService implements ConnectionService {
 					tempGraph2, 
 					child2Discovery.getCloudNumber().getXDIAddress(), 
 					child1Discovery.getCloudNumber().getXDIAddress(), 
+					XDI_ADD_CHAT,
 					null,
-					XDI_ARC_CHAT, 
 					true);
 
 			linkContract2.setPermissionTargetXDIAddress(
@@ -348,8 +348,8 @@ public class XdiConnectionService implements ConnectionService {
 					mr.getGraph(), 
 					child1Discovery.getCloudNumber().getXDIAddress(), 
 					child2Discovery.getCloudNumber().getXDIAddress(), 
+					XDI_ADD_CHAT,
 					null,
-					XDI_ARC_CHAT, 
 					false);
 
 			if (linkContract1 == null) throw new ConnectionNotFoundException("Connection not found.");
@@ -406,8 +406,8 @@ public class XdiConnectionService implements ConnectionService {
 					tempGraph, 
 					child1Discovery.getCloudNumber().getXDIAddress(), 
 					child2Discovery.getCloudNumber().getXDIAddress(), 
+					XDI_ADD_CHAT,
 					null,
-					XDI_ARC_CHAT, 
 					true);
 
 			linkContract1.setPermissionTargetXDIAddress(
@@ -491,8 +491,8 @@ public class XdiConnectionService implements ConnectionService {
 					tempGraph, 
 					child1Discovery.getCloudNumber().getXDIAddress(), 
 					child2Discovery.getCloudNumber().getXDIAddress(), 
+					XDI_ADD_CHAT,
 					null,
-					XDI_ARC_CHAT, 
 					true);
 
 			linkContract1.getXdiEntity().getXdiAttribute(XDI_ADD_BLOCKED, true).setLiteralBoolean(Boolean.TRUE);
@@ -557,8 +557,8 @@ public class XdiConnectionService implements ConnectionService {
 					tempGraph, 
 					child1Discovery.getCloudNumber().getXDIAddress(), 
 					child2Discovery.getCloudNumber().getXDIAddress(), 
+					XDI_ADD_CHAT,
 					null,
-					XDI_ARC_CHAT, 
 					true);
 
 			linkContract1.getXdiEntity().getXdiAttribute(XDI_ADD_BLOCKED, true).setLiteralBoolean(Boolean.FALSE);
@@ -686,8 +686,8 @@ public class XdiConnectionService implements ConnectionService {
 					mr.getGraph(), 
 					child1Discovery.getCloudNumber().getXDIAddress(), 
 					child2Discovery.getCloudNumber().getXDIAddress(), 
+					XDI_ADD_CHAT,
 					null,
-					XDI_ARC_CHAT, 
 					false);
 
 			if (linkContract1 == null) return null;
@@ -719,8 +719,8 @@ public class XdiConnectionService implements ConnectionService {
 					mr.getGraph(), 
 					child2Discovery.getCloudNumber().getXDIAddress(), 
 					child1Discovery.getCloudNumber().getXDIAddress(), 
+					XDI_ADD_CHAT,
 					null,
-					XDI_ARC_CHAT, 
 					false);
 
 			if (linkContract2 == null) return null;
