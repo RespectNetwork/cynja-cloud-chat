@@ -21,10 +21,14 @@ public class ConnectionImpl implements Connection{
 	private boolean isBlocked1;
 	private boolean isBlocked2;
 	private CloudName connectionName;
-	
+	private String firstName;
+	private String lastName;
+	private String nickName;
+	private String avatar;
 	
 	public ConnectionImpl(XDIAddress child1, XDIAddress child2, boolean isApprovalRequired, 
-			boolean isApproved1, boolean isApproved2, boolean isBlocked1, boolean isBlocked2, CloudName connectionName){
+			boolean isApproved1, boolean isApproved2, boolean isBlocked1, boolean isBlocked2, 
+			CloudName connectionName, String firstName, String lastName, String nickName, String avatar){
 		this.child1 = child1;
 		this.child2 = child2;		
 		this.isApprovalRequired = isApprovalRequired;
@@ -33,6 +37,10 @@ public class ConnectionImpl implements Connection{
 		this.isBlocked1 = isBlocked1;
 		this.isBlocked2 = isBlocked2;
 		this.connectionName = connectionName;
+		this.firstName = firstName;
+		this.lastName = lastName;
+		this.nickName = nickName;
+		this.avatar = avatar;
 	}	
 	
 	public ConnectionImpl(XDIAddress child1, XDIAddress child2){
@@ -42,6 +50,22 @@ public class ConnectionImpl implements Connection{
 	
 	public Boolean isApprovalRequired(){
 		return isApprovalRequired;
+	}
+	
+	public String getFirstName(){
+		return firstName;
+	}
+	
+	public String getLastName(){
+		return lastName;
+	}
+	
+	public String getNickName(){
+		return nickName;
+	}
+	
+	public String getAvtar(){
+		return avatar;
 	}
 	
 	/* (non-Javadoc)

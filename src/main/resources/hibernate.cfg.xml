@@ -15,6 +15,7 @@
         <property name="format_sql">true</property>
         <mapping class="net.rn.clouds.chat.model.EntityCloud"/>
         <mapping class="net.rn.clouds.chat.model.ConnectingClouds"/>
-        <mapping class="net.rn.clouds.chat.model.ConnectionRequest"/>        
+        <mapping class="net.rn.clouds.chat.model.ConnectionRequest"/> 
+         <mapping class="net.rn.clouds.chat.model.ConnectionProfile"/>       
     </session-factory>
 </hibernate-configuration>

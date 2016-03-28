@@ -6,17 +6,22 @@ package net.rn.clouds.chat.service.impl;
 import java.security.GeneralSecurityException;
 import java.security.PrivateKey;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 import net.rn.clouds.chat.constants.ChatErrors;
 import net.rn.clouds.chat.constants.DeleteRenew;
 import net.rn.clouds.chat.constants.Status;
 import net.rn.clouds.chat.dao.ConnectionRequestDAO;
+import net.rn.clouds.chat.dao.ConnectionRequestProfileDAO;
 import net.rn.clouds.chat.dao.impl.ConnectionRequestDAOImpl;
+import net.rn.clouds.chat.dao.impl.ConnectionRequestProfileDAOImpl;
 import net.rn.clouds.chat.exceptions.ChatSystemException;
 import net.rn.clouds.chat.exceptions.ChatValidationException;
 import net.rn.clouds.chat.model.ConnectingClouds;
+import net.rn.clouds.chat.model.ConnectionProfile;
 import net.rn.clouds.chat.model.ConnectionRequest;
+import net.rn.clouds.chat.model.ConnectionRequestProfile;
 import net.rn.clouds.chat.util.EntityUtil;
 
 import org.slf4j.Logger;
@@ -350,8 +355,8 @@ public class ConnectionServiceImpl implements ConnectionService{
 	 */
 	public Connection[] viewConnectionsAsParent(XDIAddress parent, String parentSecretToken){
 		
-		LOGGER.debug("Enter viewConnectionsAsParent with parent: {} ", parent);		
-		ConnectionImpl[] connection = null;		
+		LOGGER.debug("Enter viewConnectionsAsParent with parent: {} ", parent);				
+		List<Connection> connectionList = new ArrayList<Connection>();
 		try {
 			
 			XDIDiscoveryResult parentDiscovery = authenticate(parent, parentSecretToken);
@@ -360,37 +365,42 @@ public class ConnectionServiceImpl implements ConnectionService{
 			XDIAddress[] children = CynjaCloudChat.parentChildService.getChildren(parent, parentSecretToken);			
 												
 			List<String> collection = new ArrayList<String>();
+			String collection_str = "";
 			for (XDIAddress child : children) {
 				
 				LOGGER.debug("Getting discovery of child cloud: {}", child.toString());
 				XDIDiscoveryResult childDiscovery = InitFilter.XDI_DISCOVERY_CLIENT.discoverFromRegistry(child, null);
 				
 				LOGGER.debug("Adding child: {} to list", childDiscovery.getCloudNumber().toString());
-				collection.add(childDiscovery.getCloudNumber().toString());			
+				collection.add(childDiscovery.getCloudNumber().toString());
+				
+				if(!collection_str.equals("")){
+					collection_str+=",";
+				}
+				collection_str+="'"+childDiscovery.getCloudNumber().toString()+"'";
 			}
 			
 			LOGGER.debug("Getting connection requests of children of parent cloud:{} ",parent.toString());
-			ConnectionRequestDAO connectionRequestDAO = new ConnectionRequestDAOImpl();
-			List<ConnectionRequest> connectionRequestList = connectionRequestDAO.viewConnections(collection);
+			ConnectionRequestProfileDAO connectionRequestDAO = new ConnectionRequestProfileDAOImpl();
+			List<ConnectionRequestProfile> connectionRequestList = connectionRequestDAO.viewConnections("'"+collection_str+"'");	
 						
 			if(connectionRequestList == null || connectionRequestList.size()==0){
 				
 				return new ConnectionImpl[0];				
-			}
+			}						
 			
-			int size = (collection.size() * collection.size())+connectionRequestList.size();
-			connection = new ConnectionImpl[size];
-			int clounter = 0;
-			
-			for (Object obj : connectionRequestList) {
+			Iterator itr = connectionRequestList.iterator();
+			while(itr.hasNext()){
 				
-				if(obj instanceof ConnectionRequest){
-					
-					ConnectionRequest connectionRequest = (ConnectionRequest)obj;					
+				Object[] obj = (Object[]) itr.next();
+				
+				if(obj != null && obj.length >= 1){
+					ConnectionRequest connectionRequest = (ConnectionRequest)obj[0];
+					ConnectionProfile connectionProfile = (ConnectionProfile)obj[1];																	
 
-					XDIAddress child1;
-					XDIAddress child2;																																								
-					CloudName connectionName;
+					XDIAddress child1 = null;
+					XDIAddress child2 = null;																																								
+					CloudName connectionName = null;
 					boolean isBlocked1 = false;
 					boolean isBlocked2 = false;
 					boolean isApproved1 = false;
@@ -444,8 +454,10 @@ public class ConnectionServiceImpl implements ConnectionService{
 						
 						LOGGER.debug("Adding connection request to view list");
 						
-						connection[clounter++] = new ConnectionImpl(child1, child2, isApprovalRequired, isApproved1, 
-								isApproved2, isBlocked1, isBlocked2, connectionName);
+						Connection connection = new ConnectionImpl(child1, child2, isApprovalRequired, isApproved1, 
+								isApproved2, isBlocked1, isBlocked2, connectionName, connectionProfile.getFirstName(), 
+								connectionProfile.getLastName(), connectionProfile.getNickName(), connectionProfile.getAvatar());
+						connectionList.add(connection);
 						
 					}if (collection.contains(connectionRequest.getConnectingClouds().getAcceptingCloudNumber().toString())){
 						
@@ -486,10 +498,12 @@ public class ConnectionServiceImpl implements ConnectionService{
 						
 						LOGGER.debug("Adding connection request to view list");
 						
-						connection[clounter++] = new ConnectionImpl(child1, child2, isApprovalRequired, isApproved1, 
-								isApproved2, isBlocked1, isBlocked2, connectionName);
+						Connection connection = new ConnectionImpl(child1, child2, isApprovalRequired, isApproved1, 
+								isApproved2, isBlocked1, isBlocked2, connectionName,connectionProfile.getFirstName(), 
+								connectionProfile.getLastName(), connectionProfile.getNickName(), connectionProfile.getAvatar());
+						connectionList.add(connection);
 						
-					}																							
+					}										
 				}					
 			}				
 			
@@ -504,7 +518,9 @@ public class ConnectionServiceImpl implements ConnectionService{
 		}
 		
 		LOGGER.debug("Exit viewConnectionsAsParent with parent: {} ", parent);
-		return connection;		
+		
+		Connection[] connections = new ConnectionImpl[connectionList.size()]; 
+		return connectionList.toArray(connections);
 	}
 	
 	/* (non-Javadoc)
@@ -514,7 +530,8 @@ public class ConnectionServiceImpl implements ConnectionService{
 		
 		LOGGER.debug("Enter viewConnectionsAsChild with cloud: {}", cloud);
 		
-		ConnectionImpl[] connection = null;		
+		List<Connection> connectionList = new ArrayList<Connection>();		
+		//ConnectionImpl[] connection = null;		
 
 		try {
 			
@@ -525,24 +542,24 @@ public class ConnectionServiceImpl implements ConnectionService{
 			List<String> collection = new ArrayList<String>();
 			collection.add(cloudNumber);
 			
-			LOGGER.debug("Getting connection requests of cloud: {}", cloud.toString());
-			ConnectionRequestDAO connectionRequestDAO = new ConnectionRequestDAOImpl();
-			List<ConnectionRequest> connectionRequestList = connectionRequestDAO.viewConnections(collection);			
+			LOGGER.debug("Getting connection requests of cloud: {}", cloud.toString());			
+			ConnectionRequestProfileDAO connectionRequestDAO = new ConnectionRequestProfileDAOImpl();
+			List<ConnectionRequestProfile> connectionRequestList = connectionRequestDAO.viewConnections("'"+cloudNumber+"'");									
 			
 			if(connectionRequestList == null || connectionRequestList.size()==0){
 				
 				LOGGER.debug("No connection request found for cloud: {}", cloud.toString());
-				return new ConnectionImpl[0];
-			}
-				
-			connection = new ConnectionImpl[connectionRequestList.size()];
-			int counter = 0;
+				return new ConnectionImpl[0];				
+			}										
 			
-			for (Object obj : connectionRequestList) {
+			Iterator itr = connectionRequestList.iterator();
+			while(itr.hasNext()){
 				
-				if(obj instanceof ConnectionRequest){
-					
-					ConnectionRequest connectionRequest = (ConnectionRequest)obj;																															
+				Object[] obj = (Object[]) itr.next();
+				
+				if(obj != null && obj.length >= 1){
+					ConnectionRequest connectionRequest = (ConnectionRequest)obj[0];
+					ConnectionProfile cp = (ConnectionProfile)obj[1];																																															
 
 					XDIAddress cloud1;
 					XDIAddress cloud2;																																								
@@ -630,10 +647,13 @@ public class ConnectionServiceImpl implements ConnectionService{
 						isApprovalRequired = true;
 					}	
 					LOGGER.debug("Adding connection request to view list");
-					connection[counter++] = new ConnectionImpl(cloud1, cloud2, isApprovalRequired, 
-							isApproved1, isApproved2, isBlocked1, isBlocked2, connectionName);
+					
+					Connection connection = new ConnectionImpl(cloud1, cloud2, isApprovalRequired, 
+							isApproved1, isApproved2, isBlocked1, isBlocked2, connectionName, 
+							cp.getFirstName(), cp.getLastName(), cp.getNickName(), cp.getAvatar());
+					connectionList.add(connection);
 				}
-			}					
+			}							
 		}catch (ChatValidationException chatException) {
 
 			LOGGER.error("Error while viewing connection as cloud: {}", chatException);
@@ -645,7 +665,8 @@ public class ConnectionServiceImpl implements ConnectionService{
 		}
 		
 		LOGGER.debug("Exit viewConnectionsAsCloud with cloud: {}", cloud);
-		return connection;
+		Connection[] connections = new ConnectionImpl[connectionList.size()]; 
+		return connectionList.toArray(connections);			
 	}
 	
 	/* (non-Javadoc)
@@ -1149,7 +1170,7 @@ public class ConnectionServiceImpl implements ConnectionService{
 				connectionName = CloudName.create(connectionRequest.getRequestingConnectionName());
 			}						
 				
-			connection = new ConnectionImpl(cloud1, cloud2, isApprovalReq, approved1, approved2, blocked1, blocked2, connectionName);					
+			connection = new ConnectionImpl(cloud1, cloud2, isApprovalReq, approved1, approved2, blocked1, blocked2, connectionName, "", "", "", "");					
 			
 		}catch (ChatValidationException chatException) {
 
