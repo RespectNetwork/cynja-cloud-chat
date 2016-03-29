@@ -9,9 +9,6 @@ import java.util.Date;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.Id;
-import javax.persistence.JoinColumn;
-import javax.persistence.JoinColumns;
-import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 
 /**
@@ -24,12 +21,7 @@ import javax.persistence.Table;
 public class ConnectionProfile implements Serializable{
 
 	@Id
-	@Column(name = "cloud_number")
-	/*@ManyToOne (targetEntity = ConnectionRequest.class)
-    @JoinColumns({
-        @JoinColumn(name="accepting_cloud_number", referencedColumnName="accepting_cloud_number"),
-        @JoinColumn(name="requesting_cloud_number", referencedColumnName="requesting_cloud_number")
-    })*/
+	@Column(name = "cloud_number")	
 	private String cloudNumber;
 	
 	@Column(name = "first_name")

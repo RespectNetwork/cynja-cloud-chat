@@ -119,7 +119,7 @@ public class JsonUtil {
 			child1JsonObject.add("firstName", gson.toJsonTree(connectionImpl.getFirstName()));
 			child1JsonObject.add("lastName", gson.toJsonTree(connectionImpl.getLastName()));
 			child1JsonObject.add("nickName", gson.toJsonTree(connectionImpl.getNickName()));
-			child1JsonObject.add("avtar", gson.toJsonTree(connectionImpl.getAvtar()));
+			child1JsonObject.add("avatar", gson.toJsonTree(connectionImpl.getAvatar()));
 			
 			Session[] sessions = CynjaCloudChat.sessionService.getSessions(connectionImpl);
 

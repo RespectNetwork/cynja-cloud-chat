@@ -39,8 +39,8 @@ public class ConnectionRequest implements Serializable{
 	private String deleteRenew;		
 
 	@Column(name = "creation_date")
-	Date creationDate;	
-	
+	private Date creationDate;
+
 	public ConnectingClouds getConnectingClouds() {
 		return connectingClouds;
 	}

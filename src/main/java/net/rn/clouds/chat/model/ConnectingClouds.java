@@ -19,7 +19,7 @@ public class ConnectingClouds implements Serializable{
 
 	@Column(name = "requesting_cloud_number")
 	protected String requestingCloudNumber;
-		
+	
 	@Column(name = "accepting_cloud_number")
 	private String acceptingCloudNumber;
 	

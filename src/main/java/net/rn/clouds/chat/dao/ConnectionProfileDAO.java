@@ -4,6 +4,7 @@
 package net.rn.clouds.chat.dao;
 
 import java.util.List;
+import java.util.Set;
 
 import net.rn.clouds.chat.model.ConnectionProfile;
 
@@ -11,10 +12,11 @@ import net.rn.clouds.chat.model.ConnectionProfile;
  * @author Noopur Pandey
  *
  */
-public interface ConnectionProfileDAO {	
-	
+public interface ConnectionProfileDAO {
+
 	/**
-	 * @param cloudNumber
+	 * @param children
+	 * @return
 	 */
-	public List<ConnectionProfile> getProfile(String cloudNumber);
+	public List<ConnectionProfile> viewConnections(Set<String> children);
 }
