@@ -40,6 +40,12 @@ public class ConnectionRequest implements Serializable{
 
 	@Column(name = "creation_date")
 	private Date creationDate;
+	
+	@Column(name = "blocked_by_requester")
+	private String blockedByRequester;
+	
+	@Column(name = "blocked_by_acceptor")
+	private String blockedByAcceptor;
 
 	public ConnectingClouds getConnectingClouds() {
 		return connectingClouds;
@@ -95,5 +101,21 @@ public class ConnectionRequest implements Serializable{
 
 	public void setCreationDate(Date creationDate) {
 		this.creationDate = creationDate;
+	}
+
+	public String getBlockedByRequester() {
+		return blockedByRequester;
+	}
+
+	public void setBlockedByRequester(String blockedByRequester) {
+		this.blockedByRequester = blockedByRequester;
+	}
+
+	public String getBlockedByAcceptor() {
+		return blockedByAcceptor;
+	}
+
+	public void setBlockedByAcceptor(String blockedByAcceptor) {
+		this.blockedByAcceptor = blockedByAcceptor;
 	}
 }

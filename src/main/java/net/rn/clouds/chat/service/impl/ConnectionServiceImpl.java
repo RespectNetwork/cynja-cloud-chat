@@ -404,6 +404,8 @@ public class ConnectionServiceImpl implements ConnectionService{
 					boolean isBlocked2 = false;
 					boolean isApproved1 = false;
 					boolean isApproved2 = false;
+					String blockedBy1 = null;
+					String blockedBy2 = null;
 					
 					String deleteRenew = connectionRequest.getDeleteRenew();
 					String status = connectionRequest.getStatus();
@@ -439,10 +441,12 @@ public class ConnectionServiceImpl implements ConnectionService{
 						if(status.equals(Status.BLOCKED_BY_REQUESTER.getStatus())){
 							isBlocked1 = true;
 							isApproved2 = true;
+							blockedBy1 = connectionRequest.getBlockedByRequester();
 							
 						}else if(status.equals(Status.BLOCKED_BY_ACCEPTOR.getStatus())){
 							isBlocked2 = true;
 							isApproved1 = true;
+							blockedBy2 = connectionRequest.getBlockedByAcceptor();
 						}
 						
 						if(status.equals(Status.APPROVED.getStatus()) && deleteRenew != null && 
@@ -454,7 +458,7 @@ public class ConnectionServiceImpl implements ConnectionService{
 						LOGGER.debug("Adding connection request to view list");
 						
 						Connection connection = new ConnectionImpl(child1, child2, isApprovalRequired, isApproved1, 
-								isApproved2, isBlocked1, isBlocked2, connectionName);
+								isApproved2, isBlocked1, isBlocked2, connectionName, blockedBy1, blockedBy2);
 						connectionList.add(connection);
 						cloudSet.add(child2.toString());
 						
@@ -483,11 +487,13 @@ public class ConnectionServiceImpl implements ConnectionService{
 							
 							isBlocked1 = true;
 							isApproved2 = true;
+							blockedBy1 = connectionRequest.getBlockedByAcceptor();
 							
 						}if(status.equals(Status.BLOCKED_BY_REQUESTER.getStatus())){
 							
 							isBlocked2 = true;
 							isApproved1 = true;
+							blockedBy2 = connectionRequest.getBlockedByRequester();
 						}
 						if(status.equals(Status.APPROVED.getStatus()) && deleteRenew != null && 
 								!deleteRenew.equals(DeleteRenew.RENEWED_BY_ACCEPTOR.getDeleteRenew())){
@@ -498,7 +504,7 @@ public class ConnectionServiceImpl implements ConnectionService{
 						LOGGER.debug("Adding connection request to view list");
 						
 						Connection connection = new ConnectionImpl(child1, child2, isApprovalRequired, isApproved1, 
-								isApproved2, isBlocked1, isBlocked2, connectionName);
+								isApproved2, isBlocked1, isBlocked2, connectionName, blockedBy1, blockedBy2);
 						connectionList.add(connection);
 						cloudSet.add(child2.toString());
 					}										
@@ -589,6 +595,8 @@ public class ConnectionServiceImpl implements ConnectionService{
 					boolean isBlocked2 = false;
 					boolean isApproved1 = false;
 					boolean isApproved2 = false;
+					String blockedBy1 = null;
+					String blockedBy2 = null;
 					
 					String deleteRenew = connectionRequest.getDeleteRenew();
 					String status = connectionRequest.getStatus();
@@ -609,11 +617,13 @@ public class ConnectionServiceImpl implements ConnectionService{
 							
 							isBlocked1 = true;
 							isApproved2 = true;
+							blockedBy1 = connectionRequest.getBlockedByRequester();
 							
 						}else if(status.equals(Status.BLOCKED_BY_ACCEPTOR.getStatus())){
 							
 							isBlocked2 = true;
 							isApproved1 = true;
+							blockedBy2 = connectionRequest.getBlockedByAcceptor();
 						}
 						if(status.equals(Status.APPROVED.getStatus()) && deleteRenew != null && 
 								!deleteRenew.equals(DeleteRenew.RENEWED_BY_REQUESTER.getDeleteRenew())){
@@ -641,11 +651,13 @@ public class ConnectionServiceImpl implements ConnectionService{
 							
 							isBlocked1 = true;
 							isApproved2 = true;
+							blockedBy1 = connectionRequest.getBlockedByAcceptor();
 							
 						}else if(status.equals(Status.BLOCKED_BY_REQUESTER.getStatus())){
 							
 							isBlocked2 = true;
 							isApproved1 = true;
+							blockedBy2 = connectionRequest.getBlockedByRequester();
 						}
 						
 
@@ -670,7 +682,7 @@ public class ConnectionServiceImpl implements ConnectionService{
 					LOGGER.debug("Adding connection request to view list");
 					
 					Connection connection = new ConnectionImpl(cloud1, cloud2, isApprovalRequired, 
-							isApproved1, isApproved2, isBlocked1, isBlocked2, connectionName);
+							isApproved1, isApproved2, isBlocked1, isBlocked2, connectionName, blockedBy1, blockedBy2);
 					connectionList.add(connection);
 					
 					cloudSet.add(cloud2.toString());
@@ -701,19 +713,6 @@ public class ConnectionServiceImpl implements ConnectionService{
 					}
 				}
 			}
-			
-			/*if(connectionList != null && connectionList.size() >= 1){
-				
-				Iterator connectionListItr = connectionList.iterator();
-				
-				while(connectionListItr.hasNext()){
-					
-					
-				}
-			}*/
-			
-			
-			
 		}catch (ChatValidationException chatException) {
 
 			LOGGER.error("Error while viewing connection as cloud: {}", chatException);
@@ -820,18 +819,21 @@ public class ConnectionServiceImpl implements ConnectionService{
 							LOGGER.debug("Connection can not be blocked until approved.");
 							throw new ChatValidationException(ChatErrors.APPROVE_THE_CONNECTION_FIRST.getErrorCode(),ChatErrors.APPROVE_THE_CONNECTION_FIRST.getErrorMessage());
 						}
-						if(status.equals(Status.APPROVED.getStatus())){
+						if(status.equals(Status.BLOCKED_BY_REQUESTER.getStatus())){
+							
+							LOGGER.debug("Connection is already blocked");
+							throw new ChatValidationException(ChatErrors.ACTION_ALREADY_PERFORMED.getErrorCode(),ChatErrors.ACTION_ALREADY_PERFORMED.getErrorMessage());
+							
+						}else if(status.equals(Status.APPROVED.getStatus())){
 							
 							newStatus = Status.BLOCKED_BY_REQUESTER.getStatus();
+							connectionRequest.setBlockedByRequester(cloudNumber);
 							
 						}else if(status.equals(Status.BLOCKED_BY_ACCEPTOR.getStatus())){
 							
 							newStatus = Status.BLOCKED.getStatus();
+							connectionRequest.setBlockedByRequester(cloudNumber);
 							
-						}else if(status.equals(Status.BLOCKED_BY_REQUESTER.getStatus())){
-							
-							LOGGER.debug("Connection is already blocked");
-							throw new ChatValidationException(ChatErrors.ACTION_ALREADY_PERFORMED.getErrorCode(),ChatErrors.ACTION_ALREADY_PERFORMED.getErrorMessage());
 						}else{
 							
 							LOGGER.debug("Connection can not be blocked until approved.");
@@ -850,18 +852,21 @@ public class ConnectionServiceImpl implements ConnectionService{
 							LOGGER.debug("Connection can not be blocked until approved.");
 							throw new ChatValidationException(ChatErrors.APPROVE_THE_CONNECTION_FIRST.getErrorCode(), ChatErrors.APPROVE_THE_CONNECTION_FIRST.getErrorMessage());
 						}						
-						if(status.equals(Status.APPROVED.getStatus())){
+						if(status.equals(Status.BLOCKED_BY_ACCEPTOR.getStatus())){
+							
+							LOGGER.debug("Connection is already blocked");
+							throw new ChatValidationException(ChatErrors.ACTION_ALREADY_PERFORMED.getErrorCode(),ChatErrors.ACTION_ALREADY_PERFORMED.getErrorMessage());
+							
+						}else if(status.equals(Status.APPROVED.getStatus())){
 							
 							newStatus = Status.BLOCKED_BY_ACCEPTOR.getStatus();
+							connectionRequest.setBlockedByAcceptor(cloudNumber);
 							
 						}else if(status.equals(Status.BLOCKED_BY_REQUESTER.getStatus())){
 							
 							newStatus = Status.BLOCKED.getStatus();
+							connectionRequest.setBlockedByAcceptor(cloudNumber);
 							
-						}else if(status.equals(Status.BLOCKED_BY_ACCEPTOR.getStatus())){
-							
-							LOGGER.debug("Connection is already blocked");
-							throw new ChatValidationException(ChatErrors.ACTION_ALREADY_PERFORMED.getErrorCode(),ChatErrors.ACTION_ALREADY_PERFORMED.getErrorMessage());
 						}else{
 							
 							LOGGER.debug("Connection can not be blocked until approved.");
@@ -872,7 +877,7 @@ public class ConnectionServiceImpl implements ConnectionService{
 					if(newStatus != null){
 						
 						LOGGER.debug("Updating connection request with new status: {}", newStatus);
-						connectionRequest.setStatus(newStatus);
+						connectionRequest.setStatus(newStatus);						
 						connectionRequestDAO.updateRequest(connectionRequest);
 					}
 				}
@@ -955,10 +960,12 @@ public class ConnectionServiceImpl implements ConnectionService{
 						if(status.equals(Status.BLOCKED_BY_REQUESTER.getStatus())){
 							
 							newStatus = Status.APPROVED.getStatus();
+							connectionRequest.setBlockedByRequester(null);
 							
 						}else if(status.equals(Status.BLOCKED.getStatus())){
 							
 							newStatus = Status.BLOCKED_BY_ACCEPTOR.getStatus();
+							connectionRequest.setBlockedByRequester(null);
 							
 						}else{
 							
@@ -974,10 +981,13 @@ public class ConnectionServiceImpl implements ConnectionService{
 						if(status.equals(Status.BLOCKED_BY_ACCEPTOR.getStatus())){
 							
 							newStatus = Status.APPROVED.getStatus();
+							connectionRequest.setBlockedByAcceptor(null);
 							
 						}else if(status.equals(Status.BLOCKED.getStatus())){
 							
 							newStatus = Status.BLOCKED_BY_REQUESTER.getStatus();
+							connectionRequest.setBlockedByAcceptor(null);
+							
 						}else{
 							
 							LOGGER.debug("Connection can not be unblocked until blocked");
@@ -1173,12 +1183,8 @@ public class ConnectionServiceImpl implements ConnectionService{
 			boolean blocked1 = false;
 			boolean approved2 = true;
 			boolean blocked2 = false;
-
-			if(status.equals(Status.BLOCKED.getStatus())){
-				
-				blocked1 = true;
-				blocked2 = true;
-			}
+			String blockedBy1 = null;
+			String blockedBy2 = null;			
 
 			if(status.equals(Status.NEW.getStatus()) || status.equals(Status.CLOUD_APPROVAL_PENDING.getStatus())
 					|| status.equals(Status.CHILD_APPROVAL_PENDING.getStatus())){
@@ -1188,8 +1194,8 @@ public class ConnectionServiceImpl implements ConnectionService{
 			}
 
 
-			if(cloudNumber1.equals(connectionRequest.getConnectingClouds().getRequestingCloudNumber())){
-
+			if(cloudNumber1.equals(connectionRequest.getConnectingClouds().getRequestingCloudNumber())){				
+				
 				if(deleteRenew != null){
 
 					if(deleteRenew.equals(DeleteRenew.DELETED_BY_REQUESTER.getDeleteRenew()) 
@@ -1200,10 +1206,22 @@ public class ConnectionServiceImpl implements ConnectionService{
 					}
 				}
 
-				if(status.equals(Status.BLOCKED_BY_REQUESTER.getStatus())){
+				if(status.equals(Status.BLOCKED.getStatus())){
+					
 					blocked1 = true;
-				}else if(status.equals(Status.BLOCKED_BY_ACCEPTOR.getStatus())){
 					blocked2 = true;
+					blockedBy1 = connectionRequest.getBlockedByRequester();
+					blockedBy2 = connectionRequest.getBlockedByAcceptor();
+					
+				}else if(status.equals(Status.BLOCKED_BY_REQUESTER.getStatus())){
+					
+					blocked1 = true;
+					blockedBy1 = connectionRequest.getBlockedByRequester();
+					
+				}else if(status.equals(Status.BLOCKED_BY_ACCEPTOR.getStatus())){
+					
+					blocked2 = true;
+					blockedBy2 = connectionRequest.getBlockedByAcceptor();
 				}
 			}else if(cloudNumber1.equals(connectionRequest.getConnectingClouds().getAcceptingCloudNumber())){
 
@@ -1216,10 +1234,22 @@ public class ConnectionServiceImpl implements ConnectionService{
 					}
 				}
 
-				if(status.equals(Status.BLOCKED_BY_ACCEPTOR.getStatus())){
+				if(status.equals(Status.BLOCKED.getStatus())){
+					
 					blocked1 = true;
-				}else if(status.equals(Status.BLOCKED_BY_REQUESTER.getStatus())){
 					blocked2 = true;
+					blockedBy1 = connectionRequest.getBlockedByAcceptor();
+					blockedBy2 = connectionRequest.getBlockedByRequester();
+										
+				}else if(status.equals(Status.BLOCKED_BY_ACCEPTOR.getStatus())){
+					
+					blocked1 = true;
+					blockedBy1 = connectionRequest.getBlockedByAcceptor();
+					
+				}else if(status.equals(Status.BLOCKED_BY_REQUESTER.getStatus())){
+					
+					blocked2 = true;
+					blockedBy2 = connectionRequest.getBlockedByRequester();
 				}
 			}
 			
@@ -1230,7 +1260,8 @@ public class ConnectionServiceImpl implements ConnectionService{
 				connectionName = CloudName.create(connectionRequest.getRequestingConnectionName());
 			}						
 				
-			connection = new ConnectionImpl(cloud1, cloud2, isApprovalReq, approved1, approved2, blocked1, blocked2, connectionName);					
+			connection = new ConnectionImpl(cloud1, cloud2, isApprovalReq, approved1, approved2, 
+					blocked1, blocked2, connectionName, blockedBy1, blockedBy2);					
 			
 		}catch (ChatValidationException chatException) {
 

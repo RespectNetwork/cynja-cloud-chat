@@ -114,8 +114,9 @@ public class JsonUtil {
 			child1JsonObject.add("cloud", gson.toJsonTree(connectionImpl.getChild2().toString()));			
 			child1JsonObject.add("name", gson.toJsonTree(connectionImpl.getConnectionName().toString()));						
 			child1JsonObject.add("approved", gson.toJsonTree(connectionImpl.isApproved1()));
-			child1JsonObject.add("blocked", gson.toJsonTree(connectionImpl.isBlocked1()));
 			child1JsonObject.add("isApprovalRequired", gson.toJsonTree(connectionImpl.isApprovalRequired()));
+			child1JsonObject.add("blocked", gson.toJsonTree(connectionImpl.isBlocked1()));
+			child1JsonObject.add("blockedBy", gson.toJsonTree(connectionImpl.getBlockedBy1()));
 			child1JsonObject.add("firstName", gson.toJsonTree(connectionImpl.getFirstName()));
 			child1JsonObject.add("lastName", gson.toJsonTree(connectionImpl.getLastName()));
 			child1JsonObject.add("nickName", gson.toJsonTree(connectionImpl.getNickName()));
