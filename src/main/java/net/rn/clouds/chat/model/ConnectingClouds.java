@@ -14,12 +14,11 @@ import javax.persistence.Embeddable;
  */
 @Embeddable
 public class ConnectingClouds implements Serializable{
-
-	private static final long serialVersionUID = 1L;
+	
+    private static final long serialVersionUID = 1L;
 
 	@Column(name = "requesting_cloud_number")
 	protected String requestingCloudNumber;
-	
 	@Column(name = "accepting_cloud_number")
 	private String acceptingCloudNumber;
 	

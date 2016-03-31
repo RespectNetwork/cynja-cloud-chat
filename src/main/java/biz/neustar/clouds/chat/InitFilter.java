@@ -20,7 +20,7 @@ public class InitFilter implements Filter {
 
 	static {
 
-		XDI_DISCOVERY_CLIENT = new XDIDiscoveryClient("http://54.88.185.78:3081/registry");
+		XDI_DISCOVERY_CLIENT = new XDIDiscoveryClient("http://dev-registry.respectnetwork.net:3081/registry");
 	}
 
 	@Override

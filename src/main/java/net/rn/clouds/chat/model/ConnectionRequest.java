@@ -34,7 +34,7 @@ public class ConnectionRequest implements Serializable{
 	
 	@Column(name = "status")
 	private String status;
-	
+
 	@Column(name = "delete_renew")
 	private String deleteRenew;		
 

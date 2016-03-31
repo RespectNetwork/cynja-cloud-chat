@@ -9,7 +9,6 @@ import java.util.List;
 import net.rn.clouds.chat.dao.ConnectionRequestDAO;
 import net.rn.clouds.chat.model.ConnectingClouds;
 import net.rn.clouds.chat.model.ConnectionRequest;
-
 import org.hibernate.Session;
 import org.hibernate.criterion.Restrictions;
 
@@ -58,7 +57,6 @@ public class ConnectionRequestDAOImpl extends
 	@Override
 	//@SuppressWarnings("unchecked")
 	public List<ConnectionRequest> viewConnections(Collection<String> children) {
-
 		return findByCriteria(Restrictions.or(Restrictions.in(
 				"connectingClouds.requestingCloudNumber", children),
 				Restrictions.in("connectingClouds.acceptingCloudNumber",

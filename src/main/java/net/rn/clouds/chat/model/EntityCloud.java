@@ -5,7 +5,6 @@ package net.rn.clouds.chat.model;
 
 import java.sql.Timestamp;
 import java.util.Date;
-
 import javax.persistence.Basic;
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -102,7 +101,7 @@ public class EntityCloud {
 	@Column(name = "created_date")
     private Timestamp createdDate; 		
 
-    /**
+	/**
      * Guardian consent for creating dependent.
      */
 	@Column(name = "guardian_consent")

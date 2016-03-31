@@ -118,7 +118,6 @@ public class WebSocketEndpoint extends javax.websocket.Endpoint {
 			// check connection
 
 			Connection connection = null;
-			
 			if("1".equalsIgnoreCase(version)){
 				connection = CynjaCloudChat.connectionService.findConnection(child1, child1SecretToken, child2);
 			}else if("v2".equalsIgnoreCase(version)){

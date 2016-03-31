@@ -34,6 +34,7 @@ import xdi2.core.syntax.XDIAddress;
 import xdi2.discovery.XDIDiscoveryResult;
 import biz.neustar.clouds.chat.CynjaCloudChat;
 import biz.neustar.clouds.chat.InitFilter;
+import biz.neustar.clouds.chat.exceptions.ConnectionNotFoundException;
 import biz.neustar.clouds.chat.model.Connection;
 import biz.neustar.clouds.chat.model.Log;
 import biz.neustar.clouds.chat.service.ConnectionService;
@@ -52,7 +53,7 @@ public class ConnectionServiceImpl implements ConnectionService{
 		LOGGER.debug("Getting discovery of cloud: {}", cloud.toString());
 		if(cloud != null){
 			try{
-				cloudDiscovery = InitFilter.XDI_DISCOVERY_CLIENT.discoverFromRegistry(cloud, null);
+				cloudDiscovery = InitFilter.XDI_DISCOVERY_CLIENT.discoverFromRegistry(cloud);
 				if (cloudDiscovery == null|| cloudDiscovery.toString().equals("null (null)")){
 
 					LOGGER.error("{} not found", cloud.toString());
@@ -73,7 +74,7 @@ public class ConnectionServiceImpl implements ConnectionService{
 		
 		LOGGER.debug("Authenticating cloud: {}",cloud.toString());
 		try{
-			PrivateKey cloudPrivateKey = XDIClientUtil.retrieveSignaturePrivateKey(cloudDiscovery.getCloudNumber(), cloudDiscovery.getXdiEndpointUrl(), cloudSecretToken);	
+			PrivateKey cloudPrivateKey = XDIClientUtil.retrieveSignaturePrivateKey(cloudDiscovery.getCloudNumber(), cloudDiscovery.getXdiEndpointUri(), cloudSecretToken);	
 
 			if (cloudPrivateKey == null){
 
@@ -98,7 +99,6 @@ public class ConnectionServiceImpl implements ConnectionService{
 		
 		LOGGER.debug("Enter requestConnection with requestingCloud: {}, acceptingCloud: {}", cloud1, cloud2);
 		try {
-			
 			if(cloud1.toString().equals(cloud2.toString())){
 				
 				LOGGER.debug("Invalid connection requested between {} and {}",cloud1.toString(), cloud2.toString());
@@ -224,7 +224,6 @@ public class ConnectionServiceImpl implements ConnectionService{
 		
 		LOGGER.debug("Enter approveConnection with approverCloud: {}, cloud1: {}, cloud2: {}", cloud, cloud1, cloud2);
 		try {
-			 
 			XDIDiscoveryResult approverDiscovery = authenticate(cloud, cloudSecretToken);			
 			XDIDiscoveryResult cloud1Discovery = getXDIDiscovery(cloud1);			
 			XDIDiscoveryResult cloud2Discovery = getXDIDiscovery(cloud2);			
@@ -232,6 +231,7 @@ public class ConnectionServiceImpl implements ConnectionService{
 			String cloudNumber = approverDiscovery.getCloudNumber().toString();
 			String cloud1CloudNumber = cloud1Discovery.getCloudNumber().toString();
 			String cloud2CloudNumber = cloud2Discovery.getCloudNumber().toString();
+
 			String guardianCloudNumber = EntityUtil.getGuardianCloudNumber(cloud1CloudNumber);
 			
 			LOGGER.debug("Checking if cloud1: {} is a self or dependent cloud of cloud: {}",cloud1.toString(), cloud.toString());
@@ -354,22 +354,20 @@ public class ConnectionServiceImpl implements ConnectionService{
 	 * @see biz.neustar.clouds.chat.service.ConnectionService#viewConnectionsAsParent(xdi2.core.syntax.XDIAddress, java.lang.String)
 	 */
 	public Connection[] viewConnectionsAsParent(XDIAddress parent, String parentSecretToken){
-		
 		LOGGER.debug("Enter viewConnectionsAsParent with parent: {} ", parent);				
 		List<Connection> connectionList = new ArrayList<Connection>();
 		try {
 			
 			XDIDiscoveryResult parentDiscovery = authenticate(parent, parentSecretToken);
-				
+
 			LOGGER.debug("Getting all children of parent cloud: {}",parent.toString());
 			XDIAddress[] children = CynjaCloudChat.parentChildService.getChildren(parent, parentSecretToken);			
-												
 			List<String> collection = new ArrayList<String>();
 			String collection_str = "";
 			for (XDIAddress child : children) {
 				
 				LOGGER.debug("Getting discovery of child cloud: {}", child.toString());
-				XDIDiscoveryResult childDiscovery = InitFilter.XDI_DISCOVERY_CLIENT.discoverFromRegistry(child, null);
+				XDIDiscoveryResult childDiscovery = InitFilter.XDI_DISCOVERY_CLIENT.discoverFromRegistry(child);
 				
 				LOGGER.debug("Adding child: {} to list", childDiscovery.getCloudNumber().toString());
 				collection.add(childDiscovery.getCloudNumber().toString());
@@ -383,19 +381,15 @@ public class ConnectionServiceImpl implements ConnectionService{
 			LOGGER.debug("Getting connection requests of children of parent cloud:{} ",parent.toString());
 			ConnectionRequestDAO connectionRequestDAO = new ConnectionRequestDAOImpl();
 			List<ConnectionRequest> connectionRequestList = connectionRequestDAO.viewConnections(collection);
-						
 			if(connectionRequestList == null || connectionRequestList.size()==0){
-				
 				return new ConnectionImpl[0];				
 			}						
 			
 			Set<String> cloudSet = new HashSet<String>();
-			
 			for (Object obj : connectionRequestList) {
 				
 				if(obj instanceof ConnectionRequest){
-					
-					ConnectionRequest connectionRequest = (ConnectionRequest)obj;					
+	    			ConnectionRequest connectionRequest = (ConnectionRequest)obj;					
 
 					XDIAddress child1 = null;
 					XDIAddress child2 = null;																																								
@@ -556,9 +550,7 @@ public class ConnectionServiceImpl implements ConnectionService{
 	 * @see biz.neustar.clouds.chat.service.ConnectionService#viewConnectionsAsChild(xdi2.core.syntax.XDIAddress, java.lang.String)
 	 */
 	public Connection[] viewConnectionsAsChild(XDIAddress cloud, String cloudSecretToken){
-		
 		LOGGER.debug("Enter viewConnectionsAsChild with cloud: {}", cloud);
-		
 		List<Connection> connectionList = new ArrayList<Connection>();				
 
 		try {
@@ -581,13 +573,10 @@ public class ConnectionServiceImpl implements ConnectionService{
 			}										
 			
 			Set<String> cloudSet = new HashSet<String>();		
-			
 			for (Object obj : connectionRequestList) {
 				
 				if(obj instanceof ConnectionRequest){
-					
 					ConnectionRequest connectionRequest = (ConnectionRequest)obj;																															
-
 					XDIAddress cloud1;
 					XDIAddress cloud2;																																								
 					CloudName connectionName;
@@ -647,6 +636,7 @@ public class ConnectionServiceImpl implements ConnectionService{
 						connectionName = CloudName.create(connectionRequest.getRequestingConnectionName());
 						
 						LOGGER.debug("Checking if connection request has been blocked by cloud: {}",cloud.toString());
+
 						if(status.equals(Status.BLOCKED_BY_ACCEPTOR.getStatus())){
 							
 							isBlocked1 = true;
@@ -769,10 +759,9 @@ public class ConnectionServiceImpl implements ConnectionService{
 		
 		LOGGER.debug("Enter blockConnection with cloud: {}, cloud1: {}, cloud2: {}", cloud, cloud1, cloud2);
 		try {
-			
 			XDIDiscoveryResult cloudDiscovery = authenticate(cloud, cloudSecretToken);
-			XDIDiscoveryResult cloud1Discovery = getXDIDiscovery(cloud1)
-;			XDIDiscoveryResult cloud2Discovery = getXDIDiscovery(cloud2);
+			XDIDiscoveryResult cloud1Discovery = getXDIDiscovery(cloud1);
+			XDIDiscoveryResult cloud2Discovery = getXDIDiscovery(cloud2);
 			
 			String cloudNumber = cloudDiscovery.getCloudNumber().toString();
 			String cloud1CloudNumber = cloud1Discovery.getCloudNumber().toString();
@@ -882,7 +871,6 @@ public class ConnectionServiceImpl implements ConnectionService{
 					}
 				}
 			}			
-			
 		}catch (ChatValidationException chatException) {
 
 			LOGGER.error("Error while blocking connection: {}",chatException);
@@ -951,7 +939,6 @@ public class ConnectionServiceImpl implements ConnectionService{
 
 					String newStatus = null;
 					if(requestingCloudNumber.equals(cloudNumber) || requestingCloudNumber.equals(cloud1CloudNumber)){
-
 						if(deleteRenew != null && deleteRenew.equals(DeleteRenew.DELETED_BY_REQUESTER.getDeleteRenew())){
 							
 							LOGGER.debug("Conenction request not found.");
@@ -1003,7 +990,6 @@ public class ConnectionServiceImpl implements ConnectionService{
 					}
 				}
 			}			
-			
 		}catch (ChatValidationException chatException) {
 
 			LOGGER.error("Error while unblocking connection: {}",chatException);
@@ -1026,7 +1012,6 @@ public class ConnectionServiceImpl implements ConnectionService{
 		
 		LOGGER.debug("Enter deleteConnection with cloud: {}, cloud1: {}, cloud2: {}", cloud, cloud1, cloud2);
 		try {
-			
 			XDIDiscoveryResult cloudDiscovery = authenticate(cloud, cloudSecretToken);
 			XDIDiscoveryResult cloud1Discovery = getXDIDiscovery(cloud1);
 			XDIDiscoveryResult cloud2Discovery = getXDIDiscovery(cloud2);
@@ -1034,7 +1019,6 @@ public class ConnectionServiceImpl implements ConnectionService{
 			String cloudNumber = cloudDiscovery.getCloudNumber().toString();
 			String cloud1CloudNumber = cloud1Discovery.getCloudNumber().toString();
 			String cloud2CloudNumber = cloud2Discovery.getCloudNumber().toString();
-			
 			String guardianCloudNumber = EntityUtil.getGuardianCloudNumber(cloud1CloudNumber);
 			LOGGER.debug("Checking if cloud1: {} is a self or dependent cloud of cloud: {}",cloud1.toString(), cloud.toString());
 			if(!cloudNumber.equals(cloud1CloudNumber) && !cloudNumber.equals(guardianCloudNumber)){
@@ -1056,7 +1040,6 @@ public class ConnectionServiceImpl implements ConnectionService{
 
 				if(obj instanceof ConnectionRequest){
 					ConnectionRequest connectionRequest = (ConnectionRequest)obj;
-
 					String status = connectionRequest.getStatus();
 					String deleteRenew = connectionRequest.getDeleteRenew();
 					String requestingCloudNumber = connectionRequest.getConnectingClouds().getRequestingCloudNumber().toString();
@@ -1152,7 +1135,6 @@ public class ConnectionServiceImpl implements ConnectionService{
 	 * @see biz.neustar.clouds.chat.service.ConnectionService#findConnection(xdi2.core.syntax.XDIAddress, java.lang.String, xdi2.core.syntax.XDIAddress)
 	 */
 	public Connection findConnection(XDIAddress cloud1, String cloud1SecretToken, XDIAddress cloud2){
-		
 		LOGGER.debug("Enter findConnection with requestingCloud: {}, acceptingCloud: {}", cloud1, cloud2);
 		Connection connection = null;
 		try {
@@ -1165,6 +1147,7 @@ public class ConnectionServiceImpl implements ConnectionService{
 			
 			LOGGER.debug("Getting connection request between cloud1: {}, cloud2: {}", cloudNumber1, cloudNumber2);
 			ConnectionRequestDAO connectionRequestDAO = new ConnectionRequestDAOImpl();
+
 			List<ConnectionRequest> connectionRequestList = connectionRequestDAO.getConnectionRequest(cloudNumber1, cloudNumber2);
 			
 			if(connectionRequestList == null || connectionRequestList.size()==0){
@@ -1174,7 +1157,7 @@ public class ConnectionServiceImpl implements ConnectionService{
 			}
 									
 			ConnectionRequest connectionRequest = (ConnectionRequest)connectionRequestList.get(0);
-			
+
 			String status = connectionRequest.getStatus();
 			String deleteRenew = connectionRequest.getDeleteRenew();
 
@@ -1272,6 +1255,7 @@ public class ConnectionServiceImpl implements ConnectionService{
 			LOGGER.error("Error while finding connection: {}",ex);
 			throw new ChatSystemException(ChatErrors.SYSTEM_ERROR.getErrorCode(),ChatErrors.SYSTEM_ERROR.getErrorMessage());
 		}
+
 		return connection;		
 	}
 }
