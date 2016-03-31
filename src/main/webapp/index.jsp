@@ -22,11 +22,7 @@ function request() {
 	$.ajax({
 	    url: '/v2/request',
 	    type: 'POST',
-<<<<<<< HEAD
 	    data: 'cloud1=' + encodeURIComponent(cloud1) + '&' + 'cloud1SecretToken=' + encodeURIComponent(cloud1SecretToken) + '&' + 'cloud2=' + encodeURIComponent(cloud2),
-=======
-	    data: 'cloud1=' + encodeURIComponent(child1) + '&' + 'cloud1SecretToken=' + encodeURIComponent(child1SecretToken) + '&' + 'cloud2=' + encodeURIComponent(child2),
->>>>>>> cynja_chat_connection
 	    success: function(data) { alert('success: ' + JSON.stringify(data)); },
 	    error: function(msg) { alert('error: ' + JSON.stringify(msg)); }
 	});
@@ -42,11 +38,7 @@ function approve() {
 	$.ajax({
 	    url: '/v2/approve',
 	    type: 'POST',
-<<<<<<< HEAD
 	    data: 'cloud=' + encodeURIComponent(cloud) + '&' + 'cloudSecretToken=' + encodeURIComponent(cloudSecretToken) + '&' + 'cloud1=' + encodeURIComponent(cloud1) + '&' + 'cloud2=' + encodeURIComponent(cloud2),
-=======
-	    data: 'cloud=' + encodeURIComponent(parent) + '&' + 'cloudSecretToken=' + encodeURIComponent(parentSecretToken) + '&' + 'cloud1=' + encodeURIComponent(child1) + '&' + 'cloud2=' + encodeURIComponent(child2),
->>>>>>> cynja_chat_connection
 	    success: function(data) { alert('success: ' + JSON.stringify(data)); },
 	    error: function(msg) { alert('error: ' + JSON.stringify(msg)); }
 	});
@@ -74,11 +66,7 @@ function viewascloud() {
 	$.ajax({
 	    url: '/v2/viewaschild',
 	    type: 'POST',
-<<<<<<< HEAD
 	    data: 'cloud=' + encodeURIComponent(cloud) + '&' + 'cloudSecretToken=' + encodeURIComponent(cloudSecretToken),
-=======
-	    data: 'cloud=' + encodeURIComponent(child) + '&' + 'cloudSecretToken=' + encodeURIComponent(childSecretToken),
->>>>>>> cynja_chat_connection
 	    success: function(data) { alert('success: ' + JSON.stringify(data)); },
 	    error: function(msg) { alert('error: ' + JSON.stringify(msg)); }
 	});
@@ -110,11 +98,7 @@ function block() {
 	$.ajax({
 	    url: '/v2/block',
 	    type: 'POST',
-<<<<<<< HEAD
 	    data: 'cloud=' + encodeURIComponent(cloud) + '&' + 'cloudSecretToken=' + encodeURIComponent(cloudSecretToken) + '&' + 'cloud1=' + encodeURIComponent(cloud1) + '&' + 'cloud2=' + encodeURIComponent(cloud2),
-=======
-	    data: 'cloud=' + encodeURIComponent(parent) + '&' + 'cloudSecretToken=' + encodeURIComponent(parentSecretToken) + '&' + 'cloud1=' + encodeURIComponent(child1) + '&' + 'cloud2=' + encodeURIComponent(child2),
->>>>>>> cynja_chat_connection
 	    success: function(data) { alert('success: ' + JSON.stringify(data)); },
 	    error: function(msg) { alert('error: ' + JSON.stringify(msg)); }
 	});
@@ -130,11 +114,7 @@ function unblock() {
 	$.ajax({
 	    url: '/v2/unblock',
 	    type: 'POST',
-<<<<<<< HEAD
 	    data: 'cloud=' + encodeURIComponent(cloud) + '&' + 'cloudSecretToken=' + encodeURIComponent(cloudSecretToken) + '&' + 'cloud1=' + encodeURIComponent(cloud1) + '&' + 'cloud2=' + encodeURIComponent(cloud2),
-=======
-	    data: 'cloud=' + encodeURIComponent(parent) + '&' + 'cloudSecretToken=' + encodeURIComponent(parentSecretToken) + '&' + 'cloud1=' + encodeURIComponent(child1) + '&' + 'cloud2=' + encodeURIComponent(child2),
->>>>>>> cynja_chat_connection
 	    success: function(data) { alert('success: ' + JSON.stringify(data)); },
 	    error: function(msg) { alert('error: ' + JSON.stringify(msg)); }
 	});
@@ -150,11 +130,7 @@ function delet() {
 	$.ajax({
 	    url: '/v2/delete',
 	    type: 'POST',
-<<<<<<< HEAD
 	    data: 'cloud=' + encodeURIComponent(cloud) + '&' + 'cloudSecretToken=' + encodeURIComponent(cloudSecretToken) + '&' + 'cloud1=' + encodeURIComponent(cloud1) + '&' + 'cloud2=' + encodeURIComponent(cloud2),
-=======
-	    data: 'cloud=' + encodeURIComponent(parent) + '&' + 'cloudSecretToken=' + encodeURIComponent(parentSecretToken) + '&' + 'cloud1=' + encodeURIComponent(child1) + '&' + 'cloud2=' + encodeURIComponent(child2),
->>>>>>> cynja_chat_connection
 	    success: function(data) { alert('success: ' + JSON.stringify(data)); },
 	    error: function(msg) { alert('error: ' + JSON.stringify(msg)); }
 	});
@@ -170,11 +146,7 @@ function chatStart() {
 	var cloud2 = $("#chatCloud2").val().trim(); if (! cloud2) { alert("Please enter \"Cloud 2\""); return; }
 	var cloud1SecretToken = "";//$("#chatCloud1SecretToken").val().trim(); if (! cloud1SecretToken) { alert("Please enter \"Cloud 1 Secret Token\""); return; }
 
-<<<<<<< HEAD
 	var url = window.location.href.replace("http", "ws") + "v2/chat/" + encodeURIComponent(cloud1) + '/' + encodeURIComponent(cloud2) + '?child1SecretToken=' + cloud1SecretToken;
-=======
-	var url = window.location.href.replace("http", "ws") + "v2/chat/" + encodeURIComponent(child1) + '/' + encodeURIComponent(child2) + '?child1SecretToken=' + child1SecretToken;
->>>>>>> cynja_chat_connection
 
 	ws = new WebSocket(url, ["cynja-chat"]);
 

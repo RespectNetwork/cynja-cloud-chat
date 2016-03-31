@@ -441,6 +441,12 @@ public class ConnectionServiceImpl implements ConnectionService{
 							isBlocked2 = true;
 							isApproved1 = true;
 							blockedBy2 = connectionRequest.getBlockedByAcceptor();
+						}else if(status.equals(Status.BLOCKED.getStatus())){
+							
+							isBlocked1 = true;
+							isBlocked2 = true;
+							blockedBy1 = connectionRequest.getBlockedByRequester();
+							blockedBy2 = connectionRequest.getBlockedByAcceptor();
 						}
 						
 						if(status.equals(Status.APPROVED.getStatus()) && deleteRenew != null && 
@@ -488,6 +494,12 @@ public class ConnectionServiceImpl implements ConnectionService{
 							isBlocked2 = true;
 							isApproved1 = true;
 							blockedBy2 = connectionRequest.getBlockedByRequester();
+						}else if(status.equals(Status.BLOCKED.getStatus())){
+							
+							isBlocked1 = true;
+							isBlocked2 = true;
+							blockedBy1 = connectionRequest.getBlockedByAcceptor();
+							blockedBy2 = connectionRequest.getBlockedByRequester();							
 						}
 						if(status.equals(Status.APPROVED.getStatus()) && deleteRenew != null && 
 								!deleteRenew.equals(DeleteRenew.RENEWED_BY_ACCEPTOR.getDeleteRenew())){
@@ -613,6 +625,12 @@ public class ConnectionServiceImpl implements ConnectionService{
 							isBlocked2 = true;
 							isApproved1 = true;
 							blockedBy2 = connectionRequest.getBlockedByAcceptor();
+						}else if(status.equals(Status.BLOCKED.getStatus())){
+							
+							isBlocked1 = true;
+							isBlocked2 = true;
+							blockedBy1 = connectionRequest.getBlockedByRequester();
+							blockedBy2 = connectionRequest.getBlockedByAcceptor();
 						}
 						if(status.equals(Status.APPROVED.getStatus()) && deleteRenew != null && 
 								!deleteRenew.equals(DeleteRenew.RENEWED_BY_REQUESTER.getDeleteRenew())){
@@ -648,9 +666,13 @@ public class ConnectionServiceImpl implements ConnectionService{
 							isBlocked2 = true;
 							isApproved1 = true;
 							blockedBy2 = connectionRequest.getBlockedByRequester();
-						}
-						
-
+						}else if(status.equals(Status.BLOCKED.getStatus())){
+							
+							isBlocked1 = true;
+							isBlocked2 = true;
+							blockedBy1 = connectionRequest.getBlockedByAcceptor();
+							blockedBy2 = connectionRequest.getBlockedByRequester();							
+						}						
 						else if(status.equals(Status.APPROVED.getStatus()) && deleteRenew != null && 
 								!deleteRenew.equals(DeleteRenew.RENEWED_BY_ACCEPTOR.getDeleteRenew())){
 							
