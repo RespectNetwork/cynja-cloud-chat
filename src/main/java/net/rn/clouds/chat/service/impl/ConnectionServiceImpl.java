@@ -162,7 +162,6 @@ public class ConnectionServiceImpl implements ConnectionService{
 																
 								connectionRequest.setDeleteRenew(DeleteRenew.RENEWED_BY_ACCEPTOR.getDeleteRenew());									
 							}
-							connectionRequest.setApprovingCloudNumber(cloudParent);
 						}
 						connectionRequestDAO.updateRequest(connectionRequest);						
 					}
