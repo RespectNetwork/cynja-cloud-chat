@@ -6,6 +6,7 @@ import java.text.DateFormat;
 
 import javax.websocket.Session;
 
+import net.rn.clouds.chat.model.ChatMessage;
 import net.rn.clouds.chat.service.impl.ConnectionImpl;
 import biz.neustar.clouds.chat.CynjaCloudChat;
 import biz.neustar.clouds.chat.model.Connection;
@@ -156,4 +157,14 @@ public class JsonUtil {
 
 		return logJsonObject;
 	}
+	
+	public static JsonObject chatHistoryToJson(ChatMessage log) {
+
+        JsonObject logJsonObject = new JsonObject();
+        logJsonObject.add("messageBy", new JsonPrimitive(log.getMessageBy()));
+        logJsonObject.add("message", new JsonPrimitive(log.getMessage()));
+        logJsonObject.add("date", gson.toJsonTree(log.getCreatedTime()));
+
+        return logJsonObject;
+    }
 }

@@ -20,6 +20,7 @@ import net.rn.clouds.chat.dao.impl.ConnectionProfileDAOImpl;
 import net.rn.clouds.chat.exceptions.ChatSystemException;
 import net.rn.clouds.chat.exceptions.ChatValidationException;
 import net.rn.clouds.chat.model.ConnectingClouds;
+import net.rn.clouds.chat.model.ChatMessage;
 import net.rn.clouds.chat.model.ConnectionProfile;
 import net.rn.clouds.chat.model.ConnectionRequest;
 import net.rn.clouds.chat.util.EntityUtil;
@@ -37,6 +38,7 @@ import biz.neustar.clouds.chat.InitFilter;
 import biz.neustar.clouds.chat.exceptions.ConnectionNotFoundException;
 import biz.neustar.clouds.chat.model.Connection;
 import biz.neustar.clouds.chat.model.Log;
+import biz.neustar.clouds.chat.model.QueryInfo;
 import biz.neustar.clouds.chat.service.ConnectionService;
 
 /**
@@ -1280,4 +1282,37 @@ public class ConnectionServiceImpl implements ConnectionService{
 
 		return connection;		
 	}
+
+    @Override
+    public List<ChatMessage> chatHistory(XDIAddress cloud, String cloudSecretToken, XDIAddress cloud1,
+            XDIAddress cloud2, QueryInfo queryInfo) {
+       LOGGER.debug("Enter logsConnection with cloud: {} for cloud1: {}, cloud2: {}", cloud, cloud1, cloud2);
+       try {
+           
+           XDIDiscoveryResult cloudDiscovery = authenticate(cloud, cloudSecretToken);
+           XDIDiscoveryResult cloud1Discovery = getXDIDiscovery(cloud1);           
+           
+           String cloudNumber = cloudDiscovery.getCloudNumber().toString();
+           String cloud1CloudNumber = cloud1Discovery.getCloudNumber().toString();
+           String cloud1Guardian = EntityUtil.getGuardianCloudNumber(cloud1CloudNumber);
+           
+           if(!cloudNumber.equals(cloud1CloudNumber) && !cloudNumber.equals(cloud1Guardian)){
+               LOGGER.debug("Invalid cloud1 provided");
+               throw new ChatValidationException(ChatErrors.INVALID_CLOUD1_PROVIDED.getErrorCode(),ChatErrors.INVALID_CLOUD1_PROVIDED.getErrorMessage());
+           }
+           
+           LOGGER.debug("Getting logs for cloud1: {}, cloud2: {}", cloud1.toString(), cloud2.toString());
+           return CynjaCloudChat.logService.getChatHistory(new ConnectionImpl(cloud1, cloud2), queryInfo);
+       
+       }catch (ChatValidationException chatException) {
+
+           LOGGER.error("Error while viewing connection logs: {}", chatException);
+           throw chatException;
+       }catch (Exception ex) {
+
+           LOGGER.error("Error while viewing connection logs: {}", ex);
+           throw new ChatSystemException(ChatErrors.SYSTEM_ERROR.getErrorCode(),ChatErrors.SYSTEM_ERROR.getErrorMessage());
+       }               
+   
+    }
 }

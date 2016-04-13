@@ -3,12 +3,15 @@ package biz.neustar.clouds.chat.service.impl.stub;
 import java.util.ArrayList;
 import java.util.List;
 
+import net.rn.clouds.chat.model.ChatMessage;
+
 import xdi2.core.syntax.XDIAddress;
 import biz.neustar.clouds.chat.CynjaCloudChat;
 import biz.neustar.clouds.chat.exceptions.ConnectionNotFoundException;
 import biz.neustar.clouds.chat.exceptions.NotParentOfChildException;
 import biz.neustar.clouds.chat.model.Connection;
 import biz.neustar.clouds.chat.model.Log;
+import biz.neustar.clouds.chat.model.QueryInfo;
 import biz.neustar.clouds.chat.service.ConnectionService;
 
 public class StubConnectionService implements ConnectionService {
@@ -201,4 +204,11 @@ public class StubConnectionService implements ConnectionService {
 
 		return null;
 	}
+
+    @Override
+    public List<ChatMessage> chatHistory(XDIAddress parent, String parentSecretToken, XDIAddress child1,
+            XDIAddress child2, QueryInfo queryInfo) {
+        // TODO Auto-generated method stub
+        return null;
+    }
 }

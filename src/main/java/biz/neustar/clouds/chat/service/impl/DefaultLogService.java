@@ -6,8 +6,11 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
+import net.rn.clouds.chat.model.ChatMessage;
+
 import biz.neustar.clouds.chat.model.Connection;
 import biz.neustar.clouds.chat.model.Log;
+import biz.neustar.clouds.chat.model.QueryInfo;
 import biz.neustar.clouds.chat.service.LogService;
 import biz.neustar.clouds.chat.websocket.WebSocketMessageHandler;
 
@@ -46,4 +49,10 @@ public class DefaultLogService implements LogService {
 
 		return logList.toArray(new Log[logList.size()]);
 	}
+
+    @Override
+    public List<ChatMessage> getChatHistory(Connection connection, QueryInfo queryInfo) {
+        // TODO Auto-generated method stub
+        return null;
+    }
 }

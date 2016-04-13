@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import net.rn.clouds.chat.dao.impl.EntityCloudHibernateDAO;
+import net.rn.clouds.chat.model.ChatMessage;
 import xdi2.client.XDIClient;
 import xdi2.client.impl.http.XDIHttpClient;
 import xdi2.client.util.XDIClientUtil;
@@ -36,6 +37,7 @@ import biz.neustar.clouds.chat.InitFilter;
 import biz.neustar.clouds.chat.exceptions.ConnectionNotFoundException;
 import biz.neustar.clouds.chat.model.Connection;
 import biz.neustar.clouds.chat.model.Log;
+import biz.neustar.clouds.chat.model.QueryInfo;
 import biz.neustar.clouds.chat.service.ConnectionService;
 
 public class XdiConnectionService implements ConnectionService {
@@ -747,4 +749,11 @@ public class XdiConnectionService implements ConnectionService {
 
 		return GenericLinkContract.createGenericLinkContractXDIAddress(child, parent, null);
 	}
+
+    @Override
+    public List<ChatMessage> chatHistory(XDIAddress parent, String parentSecretToken, XDIAddress child1,
+            XDIAddress child2, QueryInfo queryInfo) {
+        // TODO Auto-generated method stub
+        return null;
+    }
 }
