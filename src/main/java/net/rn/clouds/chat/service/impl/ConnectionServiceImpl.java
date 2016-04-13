@@ -164,7 +164,6 @@ public class ConnectionServiceImpl implements ConnectionService{
 																
 								connectionRequest.setDeleteRenew(DeleteRenew.RENEWED_BY_ACCEPTOR.getDeleteRenew());									
 							}
-							connectionRequest.setApprovingCloudNumber(cloudParent);
 						}
 						connectionRequestDAO.updateRequest(connectionRequest);						
 					}
@@ -1087,6 +1086,13 @@ public class ConnectionServiceImpl implements ConnectionService{
 
 							LOGGER.debug("Deleting connection request by reuquester");
 							connectionRequest.setDeleteRenew(DeleteRenew.DELETED_BY_REQUESTER.getDeleteRenew());
+							
+							if(status.equals(Status.BLOCKED_BY_REQUESTER.getStatus())){
+								connectionRequest.setStatus(Status.APPROVED.getStatus());
+							}else if(status.equals(Status.BLOCKED.getStatus())){
+								connectionRequest.setStatus(Status.BLOCKED_BY_ACCEPTOR.getStatus());
+							}
+							connectionRequest.setBlockedByRequester(null);
 							connectionRequestDAO.updateRequest(connectionRequest);
 
 						}else if (deleteRenew != null && (deleteRenew.equals(DeleteRenew.RENEWED_BY_ACCEPTOR.getDeleteRenew()))){
@@ -1123,6 +1129,13 @@ public class ConnectionServiceImpl implements ConnectionService{
 
 							LOGGER.debug("Deleting connection request by acceptor");
 							connectionRequest.setDeleteRenew(DeleteRenew.DELETED_BY_ACCEPTOR.getDeleteRenew());
+							
+							if(status.equals(Status.BLOCKED_BY_ACCEPTOR.getStatus())){
+								connectionRequest.setStatus(Status.APPROVED.getStatus());
+							}else if(status.equals(Status.BLOCKED.getStatus())){
+								connectionRequest.setStatus(Status.BLOCKED_BY_REQUESTER.getStatus());
+							}
+							connectionRequest.setBlockedByAcceptor(null);
 							connectionRequestDAO.updateRequest(connectionRequest);	
 
 						}else if (deleteRenew != null && deleteRenew.equals(DeleteRenew.RENEWED_BY_REQUESTER.getDeleteRenew())){
