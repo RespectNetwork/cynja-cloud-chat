@@ -112,7 +112,9 @@ public class AbstractHibernateDAO<T, ID extends Serializable> extends HibernateD
             }
 
             transaction.commit();
-            return crit.list();
+            List<T> list = crit.list();
+            session.close();
+            return list;
 
         } catch (HibernateException e) {
             e.printStackTrace();
@@ -202,6 +204,8 @@ public class AbstractHibernateDAO<T, ID extends Serializable> extends HibernateD
             crit.setFirstResult(offset);
             crit.setMaxResults(limit);
             transaction.commit();
-            return crit.list();
+            List<T> list = crit.list();
+            session.close();
+            return list;
     }
 }
