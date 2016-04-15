@@ -32,6 +32,7 @@ import xdi2.client.exceptions.Xdi2ClientException;
 import xdi2.client.util.XDIClientUtil;
 import xdi2.core.syntax.CloudName;
 import xdi2.core.syntax.XDIAddress;
+import xdi2.discovery.XDIDiscoveryClient;
 import xdi2.discovery.XDIDiscoveryResult;
 import biz.neustar.clouds.chat.CynjaCloudChat;
 import biz.neustar.clouds.chat.InitFilter;
@@ -40,7 +41,7 @@ import biz.neustar.clouds.chat.model.Connection;
 import biz.neustar.clouds.chat.model.Log;
 import biz.neustar.clouds.chat.model.QueryInfo;
 import biz.neustar.clouds.chat.service.ConnectionService;
-
+import xdi2.client.impl.http.XDIHttpClient;
 /**
  * @author Noopur Pandey
  *
@@ -51,12 +52,13 @@ public class ConnectionServiceImpl implements ConnectionService{
 	
 	private XDIDiscoveryResult getXDIDiscovery(XDIAddress cloud){
 		
-		XDIDiscoveryResult cloudDiscovery = null;
+		XDIDiscoveryResult cloudDiscoveryResult = null;
 		LOGGER.debug("Getting discovery of cloud: {}", cloud.toString());
 		if(cloud != null){
 			try{
-				cloudDiscovery = InitFilter.XDI_DISCOVERY_CLIENT.discoverFromRegistry(cloud);
-				if (cloudDiscovery == null|| cloudDiscovery.toString().equals("null (null)")){
+			    XDIDiscoveryClient cloudDiscovery = new XDIDiscoveryClient(((XDIHttpClient) InitFilter.XDI_DISCOVERY_CLIENT.getRegistryXdiClient()).getXdiEndpointUri());
+                cloudDiscoveryResult = cloudDiscovery.discoverFromRegistry(cloud);
+				if (cloudDiscoveryResult == null|| cloudDiscoveryResult.toString().equals("null (null)")){
 
 					LOGGER.error("{} not found", cloud.toString());
 					throw new ChatValidationException(ChatErrors.CLOUD_NOT_FOUND.getErrorCode(), cloud.toString()+ChatErrors.CLOUD_NOT_FOUND.getErrorMessage());
@@ -67,7 +69,7 @@ public class ConnectionServiceImpl implements ConnectionService{
 				throw new ChatValidationException(ChatErrors.CLOUD_NOT_FOUND.getErrorCode(), cloud.toString()+ChatErrors.CLOUD_NOT_FOUND.getErrorMessage());
 			}
 		}
-		return cloudDiscovery;		
+		return cloudDiscoveryResult;		
 	}
 	
 	private XDIDiscoveryResult authenticate(XDIAddress cloud, String cloudSecretToken){
@@ -368,7 +370,7 @@ public class ConnectionServiceImpl implements ConnectionService{
 			for (XDIAddress child : children) {
 				
 				LOGGER.debug("Getting discovery of child cloud: {}", child.toString());
-				XDIDiscoveryResult childDiscovery = InitFilter.XDI_DISCOVERY_CLIENT.discoverFromRegistry(child);
+				XDIDiscoveryResult childDiscovery = getXDIDiscovery(child);
 				
 				LOGGER.debug("Adding child: {} to list", childDiscovery.getCloudNumber().toString());
 				collection.add(childDiscovery.getCloudNumber().toString());
