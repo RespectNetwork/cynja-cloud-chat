@@ -383,6 +383,9 @@ public class ConnectionServiceImpl implements ConnectionService{
 			
 			LOGGER.debug("Getting connection requests of children of parent cloud:{} ",parent.toString());
 			ConnectionRequestDAO connectionRequestDAO = new ConnectionRequestDAOImpl();
+			if(collection == null || collection.size()==0){
+				return new ConnectionImpl[0];
+			}
 			List<ConnectionRequest> connectionRequestList = connectionRequestDAO.viewConnections(collection);
 			if(connectionRequestList == null || connectionRequestList.size()==0){
 				return new ConnectionImpl[0];				
