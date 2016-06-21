@@ -41,7 +41,7 @@ public class ChatValidationException extends RuntimeException{
      */
     @Override
     public String toString() {
-    	String message = "{"+this.errorCode+":"+this.errorDescription+"}";
+    	String message = "{"+this.errorDescription+"}";
     	return message;
     }
 
