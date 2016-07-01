@@ -70,7 +70,7 @@ public class WebSocketEndpoint extends javax.websocket.Endpoint {
 		log.info("Installed WebSocket endpoint at " + PATH + " with subprotocols " + subprotocols);
 	}
 
-	public static void send(WebSocketMessageHandler fromWebSocketMessageHandler, String line) {
+	public static void send(WebSocketMessageHandler fromWebSocketMessageHandler, String line, Integer messageId) {
 
 		for (WebSocketMessageHandler webSocketMessageHandler : WEBSOCKETMESSAGEHANDLERS) {
 
@@ -86,7 +86,7 @@ public class WebSocketEndpoint extends javax.websocket.Endpoint {
 							fromWebSocketMessageHandler.getChild1().equals(webSocketMessageHandler.getChild1()) &&
 							fromWebSocketMessageHandler.getChild2().equals(webSocketMessageHandler.getChild2()))) {
 
-				webSocketMessageHandler.send(fromWebSocketMessageHandler, line);
+				webSocketMessageHandler.send(fromWebSocketMessageHandler, line, messageId);
 			}
 		}
 	}
