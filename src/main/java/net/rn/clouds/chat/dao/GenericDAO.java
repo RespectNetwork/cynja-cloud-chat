@@ -23,7 +23,7 @@ public interface GenericDAO<T, ID extends Serializable> {
 
     List<T> findByCriteria(Map criterias);
 
-    void save(T entity);
+    String save(T entity);
 
     void update(T entity);
 

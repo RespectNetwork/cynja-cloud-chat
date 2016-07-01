@@ -32,7 +32,7 @@ public class MySqlLogServiceImpl implements LogService {
     }
 
     @Override
-    public void addLog(WebSocketMessageHandler fromWebSocketMessageHandler, Connection connection, String message) {
+    public String addLog(WebSocketMessageHandler fromWebSocketMessageHandler, Connection connection, String message) {
         LOGGER.info("Add log for connection between cloud: {} and cloud: {}", connection.getChild1(),
                 connection.getChild2());
         ChatMessage chatMessage = new ChatMessage();
@@ -41,7 +41,7 @@ public class MySqlLogServiceImpl implements LogService {
         chatMessage.setMessage(message);
         DateTime date = new DateTime(DateTimeZone.UTC);
         chatMessage.setCreatedTime(date.getMillis());
-        chatHistoryDAO.saveMessage(chatMessage);
+        return chatHistoryDAO.saveMessage(chatMessage);
     }
 
     /**

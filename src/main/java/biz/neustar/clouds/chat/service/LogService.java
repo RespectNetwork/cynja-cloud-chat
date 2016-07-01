@@ -10,7 +10,7 @@ import biz.neustar.clouds.chat.websocket.WebSocketMessageHandler;
 
 public interface LogService {
 
-    public void addLog(WebSocketMessageHandler fromWebSocketMessageHandler, Connection connection, String line);
+    public String addLog(WebSocketMessageHandler fromWebSocketMessageHandler, Connection connection, String line);
 
     public Log[] getLogs(Connection connection);
 

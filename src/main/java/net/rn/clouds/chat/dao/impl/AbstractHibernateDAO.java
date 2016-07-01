@@ -18,7 +18,6 @@ import org.hibernate.Query;
 import org.hibernate.Session;
 import org.hibernate.Transaction;
 import org.hibernate.criterion.Criterion;
-import org.hibernate.criterion.Example;
 import org.hibernate.criterion.Order;
 import org.hibernate.criterion.Restrictions;
 import org.springframework.orm.hibernate4.support.HibernateDaoSupport;
@@ -66,12 +65,13 @@ public class AbstractHibernateDAO<T, ID extends Serializable> extends HibernateD
         return (T) getSessionFactory().getCurrentSession().load(getPersistentClass(), id);
     }
 
-    public void save(T entity) {
+    public String save(T entity) {
         Session session = getSession();
         Transaction transaction = session.beginTransaction();
-        session.save(entity);
+        String id = (String)session.save(entity);
         transaction.commit();
         session.close();
+        return id;
     }
 
     public void update(T entity) {

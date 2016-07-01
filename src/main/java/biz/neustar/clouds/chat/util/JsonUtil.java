@@ -161,6 +161,7 @@ public class JsonUtil {
 	public static JsonObject chatHistoryToJson(ChatMessage log) {
 
         JsonObject logJsonObject = new JsonObject();
+        logJsonObject.add("messageId", new JsonPrimitive(log.getChatHistoryId()));
         logJsonObject.add("messageBy", new JsonPrimitive(log.getMessageBy()));
         logJsonObject.add("message", new JsonPrimitive(log.getMessage()));
         logJsonObject.add("date", gson.toJsonTree(log.getCreatedTime()));
