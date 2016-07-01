@@ -26,7 +26,6 @@ public class DefaultLogService implements LogService {
 	}
 
 	public Integer addLog(WebSocketMessageHandler fromWebSocketMessageHandler, Connection connection, String line) {
-
 		int hashCode = connection.getChild1().hashCode() * connection.getChild2().hashCode();
 		LinkedList<Log> logList = this.logMap.get(Integer.valueOf(hashCode));
 
