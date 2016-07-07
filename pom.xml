@@ -5,7 +5,7 @@
 	<groupId>biz.neustar</groupId>
 	<artifactId>cynja-cloud-chat</artifactId>
 	<packaging>war</packaging>
-	<version>0.2</version>
+	<version>0.3</version>
 	<name>Cynja Cloud Chat</name>
 
 	<repositories>

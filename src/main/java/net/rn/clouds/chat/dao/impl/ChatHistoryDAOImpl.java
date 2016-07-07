@@ -17,8 +17,8 @@ import org.hibernate.criterion.Restrictions;
 public class ChatHistoryDAOImpl extends AbstractHibernateDAO<ChatMessage, String> implements ChatHistoryDAO {
 
     @Override
-    public void saveMessage(ChatMessage chatMessage) {
-        save(chatMessage);
+    public Integer saveMessage(ChatMessage chatMessage) {
+        return save(chatMessage);
     }
 
     @Override
