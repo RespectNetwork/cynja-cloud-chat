@@ -55,24 +55,28 @@ public class WebSocketMessageHandler implements javax.websocket.MessageHandler.W
 		}
 
 		log.info("Received line " + line + " from session " + this.session.getId());
-
-		// log line
-
-		CynjaCloudChat.logService.addLog(this, this.connection, line);
+		// log message for chat history
+        Integer messageId =0;
+        try {
+            messageId = CynjaCloudChat.logService.addLog(this, this.connection, line);
+        } catch(Exception ex) {
+            log.error("Error while storing chat message {} for session : {}", line, this.session.getId());
+        }
 
 		// send line to message handlers
-
-		WebSocketEndpoint.send(this, line);
+        log.debug("Message Id is :{}", messageId);
+		WebSocketEndpoint.send(this, line, messageId);
 	}
 
-	public void send(WebSocketMessageHandler fromWebSocketMessageHandler, String line) {
-
-		JsonObject jsonObject = new JsonObject();
+	public void send(WebSocketMessageHandler fromWebSocketMessageHandler, String line, Integer messageId) {
+	 
+	    JsonObject jsonObject = new JsonObject();
 		jsonObject.add("chatChild1", new JsonPrimitive(fromWebSocketMessageHandler.getChild1().toString()));
 		jsonObject.add("chatChild2", new JsonPrimitive(fromWebSocketMessageHandler.getChild2().toString()));
 		jsonObject.add("connectionChild1", new JsonPrimitive(fromWebSocketMessageHandler.getConnection().getChild1().toString()));
 		jsonObject.add("connectionChild2", new JsonPrimitive(fromWebSocketMessageHandler.getConnection().getChild2().toString()));
 		jsonObject.add("message", new JsonPrimitive(line));
+		jsonObject.add("messageId", new JsonPrimitive(messageId));
 
 		String string = JsonUtil.toString(jsonObject);
 

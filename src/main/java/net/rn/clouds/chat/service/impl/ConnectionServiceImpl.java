@@ -57,12 +57,13 @@ public class ConnectionServiceImpl implements ConnectionService{
 			try{
 			    XDIDiscoveryClient cloudDiscovery = new XDIDiscoveryClient(((XDIHttpClient) InitFilter.XDI_DISCOVERY_CLIENT.getRegistryXdiClient()).getXdiEndpointUri());
                 cloudDiscoveryResult = cloudDiscovery.discoverFromRegistry(cloud);
-                LOGGER.info("cloud number: {}",cloudDiscoveryResult.getCloudNumber().toString());
+
 				if (cloudDiscoveryResult == null|| cloudDiscoveryResult.toString().equals("null (null)")){
 
 					LOGGER.error("{} not found", cloud.toString());
 					throw new ChatValidationException(ChatErrors.CLOUD_NOT_FOUND.getErrorCode(), cloud.toString()+ChatErrors.CLOUD_NOT_FOUND.getErrorMessage());
-				}				
+				}
+				LOGGER.info("cloud number: {}",cloudDiscoveryResult.getCloudNumber().toString());
 			}catch(Xdi2ClientException clientExcption){
 				
 				LOGGER.error("Error while discovery of cloud: {}",clientExcption);
