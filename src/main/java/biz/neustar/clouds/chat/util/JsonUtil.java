@@ -6,6 +6,7 @@ import java.text.DateFormat;
 
 import javax.websocket.Session;
 
+import net.rn.clouds.chat.model.ChatMessage;
 import net.rn.clouds.chat.service.impl.ConnectionImpl;
 import biz.neustar.clouds.chat.CynjaCloudChat;
 import biz.neustar.clouds.chat.model.Connection;
@@ -58,6 +59,7 @@ public class JsonUtil {
 
 			JsonObject child1JsonObject = new JsonObject();
 			child1JsonObject.add("child", gson.toJsonTree(connection.getChild2().toString()));
+			
 			if(connection.getConnectionName() != null) {
 			    child1JsonObject.add("name", gson.toJsonTree(connection.getConnectionName().toString()));
 			} else {
@@ -114,8 +116,13 @@ public class JsonUtil {
 			child1JsonObject.add("cloud", gson.toJsonTree(connectionImpl.getChild2().toString()));			
 			child1JsonObject.add("name", gson.toJsonTree(connectionImpl.getConnectionName().toString()));						
 			child1JsonObject.add("approved", gson.toJsonTree(connectionImpl.isApproved1()));
-			child1JsonObject.add("blocked", gson.toJsonTree(connectionImpl.isBlocked1()));
 			child1JsonObject.add("isApprovalRequired", gson.toJsonTree(connectionImpl.isApprovalRequired()));
+			child1JsonObject.add("blocked", gson.toJsonTree(connectionImpl.isBlocked1()));
+			child1JsonObject.add("blockedBy", gson.toJsonTree(connectionImpl.getBlockedBy1()));
+			child1JsonObject.add("firstName", gson.toJsonTree(connectionImpl.getFirstName()));
+			child1JsonObject.add("lastName", gson.toJsonTree(connectionImpl.getLastName()));
+			child1JsonObject.add("nickName", gson.toJsonTree(connectionImpl.getNickName()));
+			child1JsonObject.add("avatar", gson.toJsonTree(connectionImpl.getAvatar()));
 
 			Session[] sessions = CynjaCloudChat.sessionService.getSessions(connectionImpl);
 
@@ -150,4 +157,15 @@ public class JsonUtil {
 
 		return logJsonObject;
 	}
+	
+	public static JsonObject chatHistoryToJson(ChatMessage log) {
+
+        JsonObject logJsonObject = new JsonObject();
+        logJsonObject.add("messageId", new JsonPrimitive(log.getChatHistoryId()));
+        logJsonObject.add("messageBy", new JsonPrimitive(log.getMessageBy()));
+        logJsonObject.add("message", new JsonPrimitive(log.getMessage()));
+        logJsonObject.add("date", gson.toJsonTree(log.getCreatedTime()));
+
+        return logJsonObject;
+    }
 }

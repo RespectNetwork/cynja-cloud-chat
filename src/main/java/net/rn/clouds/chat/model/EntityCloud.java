@@ -5,18 +5,12 @@ package net.rn.clouds.chat.model;
 
 import java.sql.Timestamp;
 import java.util.Date;
-import java.util.List;
-
 import javax.persistence.Basic;
-import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
-import javax.persistence.OneToMany;
 import javax.persistence.Table;
-
-import xdi2.core.syntax.CloudName;
 
 /**
  * @author Noopur Pandey
@@ -105,14 +99,9 @@ public class EntityCloud {
      * Attribute createdDate.
      */
 	@Column(name = "created_date")
-    private Timestamp createdDate; 
-	
-	/**
-     * List of CloudName
-     */
-    //private List<CloudName> cloudNames = null;
+    private Timestamp createdDate; 		
 
-    /**
+	/**
      * Guardian consent for creating dependent.
      */
 	@Column(name = "guardian_consent")
@@ -323,20 +312,6 @@ public class EntityCloud {
     public void setCreatedDate(Timestamp createdDate) {
         this.createdDate = createdDate;
     }
-
-    /**
-     * Get the list of CloudName
-     */
-    /*@OneToMany(mappedBy = "entityCloud", cascade = { CascadeType.ALL })
-    public List<CloudName> getCloudNames() {
-        return this.cloudNames;
-    }
-    *//**
-     * Set the list of CloudName
-     *//*
-    public void setCloudNames(List<CloudName> cloudNames) {
-        this.cloudNames = cloudNames;
-    }   */
 
     /**     
      * @return guardianConsent

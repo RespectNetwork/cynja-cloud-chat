@@ -154,5 +154,4 @@
 		<servlet-name>delete2</servlet-name>
 		<url-pattern>/v2/delete</url-pattern>
 	</servlet-mapping>
-
 </web-app> 

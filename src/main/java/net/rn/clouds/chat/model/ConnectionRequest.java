@@ -34,13 +34,19 @@ public class ConnectionRequest implements Serializable{
 	
 	@Column(name = "status")
 	private String status;
-	
-	@Column(name = "deleted")
-	private String deleted;		
+
+	@Column(name = "delete_renew")
+	private String deleteRenew;		
 
 	@Column(name = "creation_date")
-	Date creationDate;	
+	private Date creationDate;
 	
+	@Column(name = "blocked_by_requester")
+	private String blockedByRequester;
+	
+	@Column(name = "blocked_by_acceptor")
+	private String blockedByAcceptor;
+
 	public ConnectingClouds getConnectingClouds() {
 		return connectingClouds;
 	}
@@ -81,12 +87,12 @@ public class ConnectionRequest implements Serializable{
 		this.status = status;
 	}
 	
-	public String getDeleted() {
-		return deleted;
+	public String getDeleteRenew() {
+		return deleteRenew;
 	}
 
-	public void setDeleted(String deleted) {
-		this.deleted = deleted;
+	public void setDeleteRenew(String deleteRenew) {
+		this.deleteRenew = deleteRenew;
 	}
 
 	public Date getCreationDate() {
@@ -95,5 +101,21 @@ public class ConnectionRequest implements Serializable{
 
 	public void setCreationDate(Date creationDate) {
 		this.creationDate = creationDate;
+	}
+
+	public String getBlockedByRequester() {
+		return blockedByRequester;
+	}
+
+	public void setBlockedByRequester(String blockedByRequester) {
+		this.blockedByRequester = blockedByRequester;
+	}
+
+	public String getBlockedByAcceptor() {
+		return blockedByAcceptor;
+	}
+
+	public void setBlockedByAcceptor(String blockedByAcceptor) {
+		this.blockedByAcceptor = blockedByAcceptor;
 	}
 }

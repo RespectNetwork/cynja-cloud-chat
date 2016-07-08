@@ -19,7 +19,7 @@ public interface ConnectionRequestDAO {
 	 * @param cloud2
 	 * @return
 	 */
-	public List getConnectionRequest(String cloud1, String cloud2);
+	public List<ConnectionRequest> getConnectionRequest(String cloud1, String cloud2);
 	
 	/**
 	 * @param connectionRequest
@@ -30,7 +30,7 @@ public interface ConnectionRequestDAO {
 	 * @param children
 	 * @return
 	 */
-	public List viewConnections(Collection children);		
+	public List<ConnectionRequest> viewConnections(Collection<String> children);		
 	
 	/**
 	 * @param connectionRequest
