@@ -21,7 +21,9 @@ public enum ChatErrors {
     BLOCK_THE_CONNECTION_FIRST(9009,"This connection is already unblocked."),
     INVALID_CONNECTION_REQUEST(9010,"This connection request is invalid."),
     ALREADY_BLOCKED(9011, "This connection is already blocked."),
-    NOT_AUTHORIZED_TO_UNBLOCK(9012,"You are not authorized to unblock the connection request.");
+    NOT_AUTHORIZED_TO_UNBLOCK(9012,"You are not authorized to unblock the connection request."),
+	PENDING_FOR_APPROVAL(9013,"This connection request already exists and pending for approval."),
+	CONNECTION_BLOCKED(9014,"This connection is blocked.");
 	
 	/**
      * Error code.

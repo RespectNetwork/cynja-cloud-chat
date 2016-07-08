@@ -138,7 +138,19 @@ public class ConnectionServiceImpl implements ConnectionService{
 								(deleteRenew != null && !deleteRenew.equals(DeleteRenew.DELETED_BY_REQUESTER.getDeleteRenew())))) ||
 							(acceptingCloudNumber.equals(cloud1Number) && !status.equals(Status.NEW.getStatus()) && 
 								(deleteRenew == null || (deleteRenew != null && !deleteRenew.equals(DeleteRenew.DELETED_BY_ACCEPTOR.getDeleteRenew()))))){
-							
+						    
+    						    if(status.equals(Status.NEW.getStatus()) || status.equals(Status.CLOUD_APPROVAL_PENDING.getStatus()) 
+                                        || status.equals(Status.CHILD_APPROVAL_PENDING.getStatus())){
+                                 LOGGER.info("Connection already requested between {} and {} and is in pending state", cloud1.toString(), cloud2.toString());
+                                 throw new ChatValidationException(ChatErrors.PENDING_FOR_APPROVAL.getErrorCode(), ChatErrors.PENDING_FOR_APPROVAL.getErrorMessage());
+                                 
+    						    }else if(status.equals(Status.BLOCKED.getStatus()) || 
+                                        (acceptingCloudNumber.equals(cloud1Number) && status.equals(Status.BLOCKED_BY_REQUESTER.getStatus())) ||
+                                        (requestingCloudNumber.equals(cloud1Number) && status.equals(Status.BLOCKED_BY_ACCEPTOR))){
+                                 LOGGER.info("Connection already requested between {} and {} and is in blocked state", cloud1.toString(), cloud2.toString());
+                                 throw new ChatValidationException(ChatErrors.CONNECTION_BLOCKED.getErrorCode(), ChatErrors.CONNECTION_BLOCKED.getErrorMessage());
+    						    }
+
 								LOGGER.info("Connection already requested between {} and {}", cloud1.toString(), cloud2.toString());
 								throw new ChatValidationException(ChatErrors.CONNECTION_ALREADY_EXISTS.getErrorCode(),ChatErrors.CONNECTION_ALREADY_EXISTS.getErrorMessage());
 						} 
