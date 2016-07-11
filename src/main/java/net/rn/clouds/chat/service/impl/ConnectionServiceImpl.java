@@ -133,30 +133,35 @@ public class ConnectionServiceImpl implements ConnectionService{
 						String status = connectionRequest.getStatus();
 						String requestingCloudNumber = connectionRequest.getConnectingClouds().getRequestingCloudNumber();
 						String acceptingCloudNumber = connectionRequest.getConnectingClouds().getAcceptingCloudNumber();
-												
-						if((requestingCloudNumber.equals(cloud1Number) && (deleteRenew == null || 
-								(deleteRenew != null && !deleteRenew.equals(DeleteRenew.DELETED_BY_REQUESTER.getDeleteRenew())))) ||
-								(acceptingCloudNumber.equals(cloud1Number) &&  
-								!status.equals(Status.CLOUD_APPROVAL_PENDING.getStatus()) && 
-								!status.equals(Status.CHILD_APPROVAL_PENDING.getStatus()) &&
-								(!status.equals(Status.NEW.getStatus()) || 
-										(status.equals(Status.NEW.getStatus()) && deleteRenew != null && !deleteRenew.equals(DeleteRenew.RENEWED_BY_REQUESTER))) &&
-								(deleteRenew == null || (deleteRenew != null && !deleteRenew.equals(DeleteRenew.DELETED_BY_ACCEPTOR.getDeleteRenew()))))){
 
-								if(status.equals(Status.NEW.getStatus()) || status.equals(Status.CLOUD_APPROVAL_PENDING.getStatus()) 
-										|| status.equals(Status.CHILD_APPROVAL_PENDING.getStatus())){
-									LOGGER.info("Connection already requested between {} and {} and is in pending state", cloud1.toString(), cloud2.toString());
-									throw new ChatValidationException(ChatErrors.PENDING_FOR_APPROVAL.getErrorCode(), ChatErrors.PENDING_FOR_APPROVAL.getErrorMessage());
+						if((requestingCloudNumber.equals(cloud1Number) && ((deleteRenew == null && status.equals(Status.NEW.getStatus()) ||
+								status.equals(Status.CLOUD_APPROVAL_PENDING.getStatus()) || status.equals(Status.CHILD_APPROVAL_PENDING.getStatus()))
+								|| (deleteRenew != null && deleteRenew.equals(DeleteRenew.RENEWED_BY_REQUESTER.getDeleteRenew())))) 
+								||
+								(acceptingCloudNumber.equals(cloud1Number) && deleteRenew != null && 
+								(deleteRenew.equals(DeleteRenew.RENEWED_BY_ACCEPTOR.getDeleteRenew()) || 
+										(deleteRenew.equals(DeleteRenew.RENEWED_BY_REQUESTER.getDeleteRenew()) && status.equals(Status.NEW.getStatus()))))){
 
-								}else if(status.equals(Status.BLOCKED.getStatus()) || 
-										(acceptingCloudNumber.equals(cloud1Number) && status.equals(Status.BLOCKED_BY_ACCEPTOR.getStatus())) ||
-										(requestingCloudNumber.equals(cloud1Number) && status.equals(Status.BLOCKED_BY_REQUESTER.getStatus()))){
-									LOGGER.info("Connection already requested between {} and {} and is in blocked state", cloud1.toString(), cloud2.toString());
-									throw new ChatValidationException(ChatErrors.CONNECTION_BLOCKED.getErrorCode(), ChatErrors.CONNECTION_BLOCKED.getErrorMessage());
-								}
-								LOGGER.info("Connection already requested between {} and {}", cloud1.toString(), cloud2.toString());
-								throw new ChatValidationException(ChatErrors.CONNECTION_ALREADY_EXISTS.getErrorCode(),ChatErrors.CONNECTION_ALREADY_EXISTS.getErrorMessage());
-						} 
+							LOGGER.info("Connection already requested between {} and {} and is in pending state", cloud1.toString(), cloud2.toString());
+							throw new ChatValidationException(ChatErrors.PENDING_FOR_APPROVAL.getErrorCode(), ChatErrors.PENDING_FOR_APPROVAL.getErrorMessage());
+
+						}else if((deleteRenew == null && (status.equals(Status.APPROVED.getStatus()) ||
+								(requestingCloudNumber.equals(cloud1Number) && status.equals(Status.BLOCKED_BY_ACCEPTOR.getStatus())) ||
+								(acceptingCloudNumber.equals(cloud1Number) && status.equals(Status.BLOCKED_BY_REQUESTER.getStatus())))) 
+								||
+								(deleteRenew != null && status.equals(Status.APPROVED.getStatus()) && 
+								(requestingCloudNumber.equals(cloud1Number) && !deleteRenew.equals(DeleteRenew.DELETED_BY_REQUESTER.getDeleteRenew()) ||
+										(acceptingCloudNumber.equals(cloud1Number) && !deleteRenew.equals(DeleteRenew.DELETED_BY_ACCEPTOR.getDeleteRenew()))))){
+
+							LOGGER.info("Connection already requested between {} and {}", cloud1.toString(), cloud2.toString());
+							throw new ChatValidationException(ChatErrors.CONNECTION_ALREADY_EXISTS.getErrorCode(),ChatErrors.CONNECTION_ALREADY_EXISTS.getErrorMessage());
+
+						}else if(status.equals(Status.BLOCKED.getStatus()) || 
+								(acceptingCloudNumber.equals(cloud1Number) && status.equals(Status.BLOCKED_BY_ACCEPTOR.getStatus())) ||
+								(requestingCloudNumber.equals(cloud1Number) && status.equals(Status.BLOCKED_BY_REQUESTER.getStatus()))){
+							LOGGER.info("Connection already requested between {} and {} and is in blocked state", cloud1.toString(), cloud2.toString());
+							throw new ChatValidationException(ChatErrors.CONNECTION_BLOCKED.getErrorCode(), ChatErrors.CONNECTION_BLOCKED.getErrorMessage());
+						}
 
 						//Request has been deleted from one of the cloud
 						if(cloudParent.equals("")){
