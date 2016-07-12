@@ -32,7 +32,6 @@ public class UnblockServlet extends HttpServlet{
 	@Override
 	protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 
-		resp.setContentType("appliction/json");
 		try{		
 
 			XDIAddress cloud = Utility.creteXDIAddress(req.getParameter("cloud"));
