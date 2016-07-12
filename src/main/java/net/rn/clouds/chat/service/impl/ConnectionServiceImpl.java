@@ -170,10 +170,9 @@ public class ConnectionServiceImpl implements ConnectionService{
 
 								LOGGER.info("Approving the request");
 								connectionRequest.setStatus(Status.APPROVED.getStatus());
+								connectionRequest.setApprovingCloudNumber(null);
 							}else if(acceptingCloudNumber.equals(cloud1Number) && status.equals(Status.NEW.getStatus())){
 								LOGGER.info("Approved from cloud1 and renewed from cloud2 ");
-								connectionRequest.setStatus(Status.APPROVED.getStatus());
-								connectionRequest.setApprovingCloudNumber(null);
 								connectionRequest.setDeleteRenew(DeleteRenew.RENEWED_BY_REQUESTER.getDeleteRenew());
 							}else{
 								LOGGER.info("Revert the deletion ");
