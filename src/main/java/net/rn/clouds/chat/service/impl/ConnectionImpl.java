@@ -27,7 +27,7 @@ public class ConnectionImpl implements Connection{
 	private String lastName;
 	private String nickName;
 	private String avatar;
-	
+
 	public ConnectionImpl(XDIAddress child1, XDIAddress child2, boolean isApprovalRequired, 
 			boolean isApproved1, boolean isApproved2, boolean isBlocked1, boolean isBlocked2, 
 			CloudName connectionName, String blockedBy1, String blockedBy2){
@@ -42,11 +42,17 @@ public class ConnectionImpl implements Connection{
 		this.blockedBy1 = blockedBy1;
 		this.blockedBy2 = blockedBy2;
 	}	
-		
+
 	public ConnectionImpl(XDIAddress child1, XDIAddress child2){
 		this.child1 = child1;
 		this.child2 = child2;		
-	}		
+	}
+
+	public ConnectionImpl(XDIAddress child1, XDIAddress child2, CloudName connectionName){
+		this.child1 = child1;
+		this.child2 = child2;
+		this.connectionName = connectionName;
+	}
 	
 	public Boolean isApprovalRequired(){
 		return isApprovalRequired;

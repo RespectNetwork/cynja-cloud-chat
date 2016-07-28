@@ -54,17 +54,21 @@ public class WebSocketMessageHandler implements javax.websocket.MessageHandler.W
 			throw new RuntimeException(ex.getMessage(), ex);
 		}
 
+        boolean isOnline = isFriendOnline();
+        log.info("is other cloud: {} online:{}", child2.toString(), isOnline);
+
 		log.info("Received line " + line + " from session " + this.session.getId());
 		// log message for chat history
         Integer messageId =0;
         try {
-            messageId = CynjaCloudChat.logService.addLog(this, this.connection, line);
+            messageId = CynjaCloudChat.logService.addLog(this, this.connection, line, isOnline);
         } catch(Exception ex) {
             log.error("Error while storing chat message {} for session : {}", line, this.session.getId());
         }
 
 		// send line to message handlers
         log.debug("Message Id is :{}", messageId);
+
 		WebSocketEndpoint.send(this, line, messageId);
 	}
 
@@ -107,5 +111,26 @@ public class WebSocketMessageHandler implements javax.websocket.MessageHandler.W
 	public Connection getConnection() {
 
 		return this.connection;
+	}
+
+	/* (non-Javadoc)
+	 * @see java.lang.Object#equals(java.lang.Object)
+	 */
+	@Override
+	public boolean equals(Object obj) {
+		if(obj instanceof WebSocketMessageHandler){
+			WebSocketMessageHandler handler = (WebSocketMessageHandler)obj;
+			if( handler.getChild1().equals(this.child1) 
+					&& handler.getChild2().equals(this.child2)){
+						return true;
+					}
+		}
+		return false;
+	}
+
+	private boolean isFriendOnline(){
+
+		WebSocketMessageHandler handler = new WebSocketMessageHandler(this.session, this.child2, child1, connection);
+        return WebSocketEndpoint.WEBSOCKETMESSAGEHANDLERS.contains(handler);
 	}
 }

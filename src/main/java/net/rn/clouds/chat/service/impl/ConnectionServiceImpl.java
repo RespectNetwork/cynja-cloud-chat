@@ -12,6 +12,7 @@ import java.util.Set;
 
 import net.rn.clouds.chat.constants.ChatErrors;
 import net.rn.clouds.chat.constants.DeleteRenew;
+import net.rn.clouds.chat.constants.MessageStatus;
 import net.rn.clouds.chat.constants.Status;
 import net.rn.clouds.chat.dao.ConnectionRequestDAO;
 import net.rn.clouds.chat.dao.ConnectionProfileDAO;
@@ -24,6 +25,7 @@ import net.rn.clouds.chat.model.ChatMessage;
 import net.rn.clouds.chat.model.ConnectionProfile;
 import net.rn.clouds.chat.model.ConnectionRequest;
 import net.rn.clouds.chat.util.EntityUtil;
+import net.rn.clouds.chat.util.Utility;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -869,12 +871,12 @@ public class ConnectionServiceImpl implements ConnectionService{
 		try {
 			
 			XDIDiscoveryResult cloudDiscovery = authenticate(cloud, cloudSecretToken);
-			XDIDiscoveryResult cloud1Discovery = getXDIDiscovery(cloud1);			
+			XDIDiscoveryResult cloud1Discovery = getXDIDiscovery(cloud1);
 			
 			String cloudNumber = cloudDiscovery.getCloudNumber().toString();
 			String cloud1CloudNumber = cloud1Discovery.getCloudNumber().toString();
 			String cloud1Guardian = EntityUtil.getGuardianCloudNumber(cloud1CloudNumber);
-			
+
 			if(!cloudNumber.equals(cloud1CloudNumber) && !cloudNumber.equals(cloud1Guardian)){
 				LOGGER.info("Invalid cloud1 provided");
 				throw new ChatValidationException(ChatErrors.INVALID_CLOUD_PROVIDED.getErrorCode(),ChatErrors.INVALID_CLOUD_PROVIDED.getErrorMessage());
@@ -1185,8 +1187,8 @@ public class ConnectionServiceImpl implements ConnectionService{
 					String status = connectionRequest.getStatus();
 					String deleteRenew = connectionRequest.getDeleteRenew();
 					String requestingCloudNumber = connectionRequest.getConnectingClouds().getRequestingCloudNumber().toString();
-					String acceptingCloudNumber = connectionRequest.getConnectingClouds().getAcceptingCloudNumber().toString();										
-					
+					String acceptingCloudNumber = connectionRequest.getConnectingClouds().getAcceptingCloudNumber().toString();
+
 					if(deleteRenew == null && (status.equals(Status.NEW.getStatus()) || status.equals(Status.CLOUD_APPROVAL_PENDING.getStatus()) 
 							|| status.equals(Status.CHILD_APPROVAL_PENDING.getStatus()))){
 						
@@ -1425,10 +1427,10 @@ public class ConnectionServiceImpl implements ConnectionService{
            
            XDIDiscoveryResult cloudDiscovery = authenticate(cloud, cloudSecretToken);
            XDIDiscoveryResult cloud1Discovery = getXDIDiscovery(cloud1);           
-           
+
            String cloudNumber = cloudDiscovery.getCloudNumber().toString();
            String cloud1CloudNumber = cloud1Discovery.getCloudNumber().toString();
-           String cloud1Guardian = EntityUtil.getGuardianCloudNumber(cloud1CloudNumber);
+           String cloud1Guardian = EntityUtil.getGuardianCloudNumber(cloud1CloudNumber);      
            
            if(!cloudNumber.equals(cloud1CloudNumber) && !cloudNumber.equals(cloud1Guardian)){
                LOGGER.info("Invalid cloud1 provided");
@@ -1436,7 +1438,9 @@ public class ConnectionServiceImpl implements ConnectionService{
            }
            
            LOGGER.info("Getting logs for cloud1: {}, cloud2: {}", cloud1.toString(), cloud2.toString());
-           return CynjaCloudChat.logService.getChatHistory(new ConnectionImpl(cloud1, cloud2), queryInfo);
+           List<ChatMessage> chatMessageList = CynjaCloudChat.logService.getChatHistory(new ConnectionImpl(cloud1, cloud2), queryInfo);
+
+           return chatMessageList;
        
        }catch (ChatValidationException chatException) {
 
@@ -1447,6 +1451,135 @@ public class ConnectionServiceImpl implements ConnectionService{
            LOGGER.error("Error while viewing connection logs: {}", ex);
            throw new ChatSystemException(ChatErrors.SYSTEM_ERROR.getErrorCode(),ChatErrors.SYSTEM_ERROR.getErrorMessage());
        }               
-   
+    }
+
+    /* (non-Javadoc)
+     * @see biz.neustar.clouds.chat.service.ConnectionService#notifications(xdi2.core.syntax.XDIAddress, java.lang.String)
+     */
+    @Override
+    public Connection[] notifications(XDIAddress cloud, String cloudSecretToken) {
+    	 LOGGER.info("Enter notifications of cloud: {}", cloud);
+    	 List<Connection> connectionList = new ArrayList<Connection>();
+         try {
+
+             XDIDiscoveryResult cloudDiscovery = authenticate(cloud, cloudSecretToken);
+
+             String cloudNumber = cloudDiscovery.getCloudNumber().toString();
+
+             LOGGER.info("Getting unread message notification for cloud: {}", cloudNumber);
+ 			 ConnectionRequestDAO connectionRequestDAO = new ConnectionRequestDAOImpl();
+
+ 			 List<Connection> connectionRequestList = connectionRequestDAO.getNotification(cloudNumber);
+
+             if(connectionRequestList == null || connectionRequestList.size()==0){
+
+ 				LOGGER.info("No connection request found for cloud: {}", cloud.toString());
+ 				return new ConnectionImpl[0];
+ 			}
+
+ 			for (Object obj : connectionRequestList) {
+
+ 				if(obj instanceof ConnectionRequest){
+ 					ConnectionRequest connectionRequest = (ConnectionRequest)obj;
+
+ 					XDIAddress cloud1;
+ 					XDIAddress cloud2;
+ 					CloudName connectionName;
+
+ 					String deleteRenew = connectionRequest.getDeleteRenew();
+ 					String status = connectionRequest.getStatus();
+
+ 					if (cloudNumber.equals(connectionRequest.getConnectingClouds().getRequestingCloudNumber().toString())){
+
+ 						if(deleteRenew !=null && (deleteRenew.equals(DeleteRenew.DELETED_BY_REQUESTER.getDeleteRenew()) 
+ 								|| deleteRenew.equals(DeleteRenew.RENEWED_BY_REQUESTER.getDeleteRenew()))){
+ 							LOGGER.info("Do not add unread message notification to view list if connection request is deleted by requester");
+ 							continue;
+ 						}
+
+ 						if(status.equals(Status.BLOCKED) || status.equals(Status.BLOCKED_BY_REQUESTER)){
+ 							LOGGER.info("Do not add unread message notification to view list if connection request is blocked by requester");
+ 							continue;
+ 						}
+
+ 						cloud1 = XDIAddress.create(connectionRequest.getConnectingClouds().getRequestingCloudNumber());
+						cloud2 = XDIAddress.create(connectionRequest.getConnectingClouds().getAcceptingCloudNumber());
+ 						connectionName = CloudName.create(connectionRequest.getAcceptingConnectionName());
+ 					}else{
+
+ 						if(deleteRenew !=null && (deleteRenew.equals(DeleteRenew.DELETED_BY_ACCEPTOR.getDeleteRenew()) 
+ 								|| deleteRenew.equals(DeleteRenew.RENEWED_BY_ACCEPTOR.getDeleteRenew()))){
+ 							LOGGER.info("Do not add unread message notification to view list if connection request is deleted by requester");
+ 							continue;
+ 						}
+
+ 						if(status.equals(Status.BLOCKED) || status.equals(Status.BLOCKED_BY_REQUESTER)){
+ 							LOGGER.info("Do not add unread message notification to view list if connection request is blocked by requester");
+ 							continue;
+ 						}
+
+ 						cloud1 = XDIAddress.create(connectionRequest.getConnectingClouds().getAcceptingCloudNumber());
+						cloud2 = XDIAddress.create(connectionRequest.getConnectingClouds().getRequestingCloudNumber());
+ 						connectionName = CloudName.create(connectionRequest.getRequestingConnectionName());
+ 					}
+
+ 					Connection connection = new ConnectionImpl(cloud1, cloud2, connectionName);
+					connectionList.add(connection);
+ 				}
+ 			}
+             Connection[] connections = new ConnectionImpl[connectionList.size()];
+     		 return connectionList.toArray(connections);
+
+         }catch (ChatValidationException chatException) {
+
+             LOGGER.error("Error while viewing connection logs: {}", chatException);
+             throw chatException;
+         }catch (Exception ex) {
+
+             LOGGER.error("Error while viewing connection logs: {}", ex);
+             throw new ChatSystemException(ChatErrors.SYSTEM_ERROR.getErrorCode(),ChatErrors.SYSTEM_ERROR.getErrorMessage());
+         }
+    }
+
+    /* (non-Javadoc)
+     * @see biz.neustar.clouds.chat.service.ConnectionService#updateChatStatus(xdi2.core.syntax.XDIAddress)
+     */
+    @Override
+    public void updateChatStatus(XDIAddress cloud1, List<ChatMessage> chatMessageList) {
+    	LOGGER.info("Enter updateChatStatus of cloud: {}", cloud1.toString());
+
+    	String cloudNumber1 = null;
+    	boolean isListChanged = false;
+    	List<Integer> chatHistoryId = new ArrayList<Integer>();
+    	int index = 0;
+
+    	for(ChatMessage chatMessage : chatMessageList){
+
+			if(chatMessage.getStatus().equals(MessageStatus.READ.getStatus())){
+				continue;
+			}
+
+			LOGGER.info("a unread message found chat_history_id: {}", chatMessage.getChatHistoryId());
+			if(cloudNumber1 == null){
+				XDIDiscoveryResult cloud1Discovery = getXDIDiscovery(cloud1);
+				cloudNumber1 = cloud1Discovery.getCloudNumber().toString();
+
+				XDIAddress cloud2 = Utility.creteXDIAddress(chatMessage.getMessageBy());
+				XDIDiscoveryResult cloud2Discovery = getXDIDiscovery(cloud2);
+				String cloudNumber2 = cloud2Discovery.getCloudNumber().toString();
+
+				if(cloudNumber1.equals(cloudNumber2)){
+					LOGGER.info("cloud: {} is not having any unread message, so exiting");
+					break;
+				}
+			}
+			chatHistoryId.add(chatMessage.getChatHistoryId());
+    	}
+
+    	if(chatHistoryId.size() > 0){
+    		LOGGER.info("Cloud: {} is having unread messages :{}",chatHistoryId.toArray());
+    		Integer[] arrChatHistoryId = new Integer[chatHistoryId.size()];
+    		CynjaCloudChat.logService.updateMessageStatus(chatHistoryId.toArray(arrChatHistoryId));
+    	}
     }
 }

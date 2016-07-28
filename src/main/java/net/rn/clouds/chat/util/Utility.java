@@ -37,7 +37,8 @@ public class Utility {
         if (req.getParameter("limit") != null) {
             queryInfo.setLimit(Integer.valueOf(req.getParameter("limit")));
         }
-        queryInfo.setSortOrder(req.getParameter("offset"));
+        queryInfo.setSortOrder(req.getParameter("sortOrder"));
+        queryInfo.setStatus(req.getParameter("status"));
         return queryInfo;
     }
 

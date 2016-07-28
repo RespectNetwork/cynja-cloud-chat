@@ -47,6 +47,9 @@ public class ConnectionRequest implements Serializable{
 	@Column(name = "blocked_by_acceptor")
 	private String blockedByAcceptor;
 
+	@Column(name = "connection_id")
+	private Integer connectionId;
+
 	public ConnectingClouds getConnectingClouds() {
 		return connectingClouds;
 	}
@@ -117,5 +120,13 @@ public class ConnectionRequest implements Serializable{
 
 	public void setBlockedByAcceptor(String blockedByAcceptor) {
 		this.blockedByAcceptor = blockedByAcceptor;
+	}
+
+	public Integer getConnectionId() {
+		return connectionId;
+	}
+
+	public void setConnectionId(Integer connectionId) {
+		this.connectionId = connectionId;
 	}
 }

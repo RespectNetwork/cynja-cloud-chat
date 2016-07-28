@@ -13,6 +13,7 @@ import javax.websocket.CloseReason;
 import javax.websocket.CloseReason.CloseCodes;
 import javax.websocket.Session;
 
+import net.rn.clouds.chat.constants.ChatErrors;
 import net.rn.clouds.chat.exceptions.ChatSystemException;
 import net.rn.clouds.chat.exceptions.ChatValidationException;
 import net.rn.clouds.chat.util.Utility;
@@ -60,6 +61,11 @@ public class DeleteServlet  extends HttpServlet{
 
 			LOGGER.error("ErrorCode: [{}] : ErrorMessage: {}", se.getErrorCode(), se.getErrorDescription(), se);
 			Utility.handleChatException(resp, se.getErrorCode(), se.getErrorDescription());
+
+		}catch(Exception ex){
+
+			LOGGER.error("ErrorCode: [{}] : ErrorMessage: {}",ChatErrors.SYSTEM_ERROR.getErrorCode(), ex.getMessage(), ex);
+			Utility.handleChatException(resp, ChatErrors.SYSTEM_ERROR.getErrorCode(), ChatErrors.SYSTEM_ERROR.getErrorMessage());
 		}
 	}
 }

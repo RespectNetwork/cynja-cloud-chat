@@ -26,6 +26,8 @@ public class ChatMessage {
     private String messageBy;
     @Column(name = "created_time")
     private long createdTime;
+    @Column(name = "status")
+    private String status;
 
     /**
      * @return the chatHistoryId
@@ -102,4 +104,17 @@ public class ChatMessage {
         this.createdTime = createdTime;
     }
 
+	/**
+	 * @return the status READ/UNREAD
+	 */
+	public String getStatus() {
+		return status;
+	}
+
+	/**
+	 * @param status
+	 */
+	public void setStatus(String status) {
+		this.status = status;
+	}
 }

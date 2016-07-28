@@ -5,6 +5,7 @@ package biz.neustar.clouds.chat.service.impl;
 
 import java.util.List;
 
+import net.rn.clouds.chat.constants.MessageStatus;
 import net.rn.clouds.chat.dao.ChatHistoryDAO;
 import net.rn.clouds.chat.dao.impl.ChatHistoryDAOImpl;
 import net.rn.clouds.chat.model.ChatMessage;
@@ -32,13 +33,18 @@ public class MySqlLogServiceImpl implements LogService {
     }
 
     @Override
-    public Integer addLog(WebSocketMessageHandler fromWebSocketMessageHandler, Connection connection, String message) {
+    public Integer addLog(WebSocketMessageHandler fromWebSocketMessageHandler, Connection connection, String message, boolean isOnline) {
         LOGGER.info("Add log for connection between cloud: {} and cloud: {}", connection.getChild1(),
                 connection.getChild2());
         ChatMessage chatMessage = new ChatMessage();
         chatMessage.setConnection_id(getConnectionId(connection));
         chatMessage.setMessageBy(connection.getChild1().toString());
         chatMessage.setMessage(message);
+        if(isOnline){
+        	chatMessage.setStatus(MessageStatus.READ.getStatus());
+        }else{
+        	chatMessage.setStatus(MessageStatus.UNREAD.getStatus());
+        }
         DateTime date = new DateTime(DateTimeZone.UTC);
         chatMessage.setCreatedTime(date.getMillis());
         return chatHistoryDAO.saveMessage(chatMessage);
@@ -63,7 +69,15 @@ public class MySqlLogServiceImpl implements LogService {
         LOGGER.info("Get chat logs for connection between cloud: {} and cloud: {}", connection.getChild1(),
                 connection.getChild2());
         return chatHistoryDAO.viewChatHistory(getConnectionId(connection), queryInfo.getOffset(), queryInfo.getLimit(),
-                queryInfo.getSortOrder());
+                queryInfo.getSortOrder(), queryInfo.getStatus());
     }
 
+	/* (non-Javadoc)
+	 * @see biz.neustar.clouds.chat.service.LogService#updateMessageStatus()
+	 */
+	@Override
+	public void updateMessageStatus(Integer[] chatHistoryId) {
+		LOGGER.info("Update chat status for connection_id: {}", chatHistoryId.toString());		
+		chatHistoryDAO.updateMessageStatus(chatHistoryId);
+	}
 }

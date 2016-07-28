@@ -10,7 +10,10 @@ import net.rn.clouds.chat.dao.ConnectionRequestDAO;
 import net.rn.clouds.chat.model.ConnectingClouds;
 import net.rn.clouds.chat.model.ConnectionRequest;
 import org.hibernate.Session;
+import org.hibernate.Transaction;
 import org.hibernate.criterion.Restrictions;
+
+import biz.neustar.clouds.chat.model.Connection;
 
 /**
  * @author Noopur Pandey
@@ -89,5 +92,24 @@ public class ConnectionRequestDAOImpl extends
 		session.getTransaction().commit();
 		session.close();
 		
+	}
+
+	/* (non-Javadoc)
+     * @see net.rn.clouds.chat.dao.ChatHistoryDAO#getNotification(java.lang.String)
+     */
+    @Override
+	public List<Connection> getNotification(String cloudNumber) {
+    	
+    	Session session = getSession();
+    	Transaction transaction = session.beginTransaction();
+    	
+    	List<Connection> connections = session.createQuery("from ConnectionRequest cr where "
+    			+ "(cr.connectingClouds.requestingCloudNumber='"+cloudNumber+"' and cr.connectionId in "
+    					+ "(select ch.connection_id from ChatMessage ch where ch.status='UNREAD' and ch.messageBy!=cr.requestingConnectionName )) or "
+    			+"(cr.connectingClouds.acceptingCloudNumber='"+cloudNumber+"' and cr.connectionId in "
+    					+ "(select ch.connection_id from ChatMessage ch where ch.status='UNREAD' and ch.messageBy!=cr.acceptingConnectionName))").list();
+    	transaction.commit();
+    	session.close();
+    	return connections;
 	}
 }
