@@ -68,4 +68,13 @@ public class Utility {
 			throw new ChatSystemException(ChatErrors.SYSTEM_ERROR.getErrorCode(),ChatErrors.SYSTEM_ERROR.getErrorMessage());
 		}
     }
+
+    /**
+     * @param connection
+     */
+    public static Integer getConnectionId(XDIAddress cloud1, XDIAddress cloud2) {
+        Integer id = cloud1.hashCode() * cloud2.hashCode();
+        LOGGER.debug("Connection id is: {}", id);
+        return Math.abs(id);
+    }
 }

@@ -250,6 +250,9 @@ public class ConnectionServiceImpl implements ConnectionService{
 				connectionRequest.setApprovingCloudNumber(approvingCloudNumber);
 				connectionRequest.setStatus(status);
 
+				Integer connection_id = Utility.getConnectionId(cloud1, cloud2);
+				connectionRequest.setConnectionId(connection_id);
+
 				LOGGER.info("Saving new connection request");
 				connectionRequestDAO.requestConnection(connectionRequest);
 			}
@@ -1424,7 +1427,7 @@ public class ConnectionServiceImpl implements ConnectionService{
             XDIAddress cloud2, QueryInfo queryInfo) {
        LOGGER.info("Enter logsConnection with cloud: {} for cloud1: {}, cloud2: {}", cloud, cloud1, cloud2);
        try {
-           
+
            XDIDiscoveryResult cloudDiscovery = authenticate(cloud, cloudSecretToken);
            XDIDiscoveryResult cloud1Discovery = getXDIDiscovery(cloud1);           
 
@@ -1549,9 +1552,7 @@ public class ConnectionServiceImpl implements ConnectionService{
     	LOGGER.info("Enter updateChatStatus of cloud: {}", cloud1.toString());
 
     	String cloudNumber1 = null;
-    	boolean isListChanged = false;
     	List<Integer> chatHistoryId = new ArrayList<Integer>();
-    	int index = 0;
 
     	for(ChatMessage chatMessage : chatMessageList){
 

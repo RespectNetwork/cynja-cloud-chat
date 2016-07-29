@@ -9,6 +9,7 @@ import net.rn.clouds.chat.constants.MessageStatus;
 import net.rn.clouds.chat.dao.ChatHistoryDAO;
 import net.rn.clouds.chat.dao.impl.ChatHistoryDAOImpl;
 import net.rn.clouds.chat.model.ChatMessage;
+import net.rn.clouds.chat.util.Utility;
 
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
@@ -37,7 +38,7 @@ public class MySqlLogServiceImpl implements LogService {
         LOGGER.info("Add log for connection between cloud: {} and cloud: {}", connection.getChild1(),
                 connection.getChild2());
         ChatMessage chatMessage = new ChatMessage();
-        chatMessage.setConnection_id(getConnectionId(connection));
+        chatMessage.setConnection_id(Utility.getConnectionId(connection.getChild1(), connection.getChild2()));
         chatMessage.setMessageBy(connection.getChild1().toString());
         chatMessage.setMessage(message);
         if(isOnline){
@@ -50,15 +51,6 @@ public class MySqlLogServiceImpl implements LogService {
         return chatHistoryDAO.saveMessage(chatMessage);
     }
 
-    /**
-     * @param connection
-     */
-    private Integer getConnectionId(Connection connection) {
-        Integer id = connection.getChild1().hashCode() * connection.getChild2().hashCode();
-        LOGGER.debug("Connection id is: {}", id);
-        return Math.abs(id);
-    }
-
     @Override
     public Log[] getLogs(Connection connection) {
         return null;
@@ -68,7 +60,7 @@ public class MySqlLogServiceImpl implements LogService {
     public List<ChatMessage> getChatHistory(Connection connection, QueryInfo queryInfo) {
         LOGGER.info("Get chat logs for connection between cloud: {} and cloud: {}", connection.getChild1(),
                 connection.getChild2());
-        return chatHistoryDAO.viewChatHistory(getConnectionId(connection), queryInfo.getOffset(), queryInfo.getLimit(),
+        return chatHistoryDAO.viewChatHistory(Utility.getConnectionId(connection.getChild1(), connection.getChild2()), queryInfo.getOffset(), queryInfo.getLimit(),
                 queryInfo.getSortOrder(), queryInfo.getStatus());
     }
 
