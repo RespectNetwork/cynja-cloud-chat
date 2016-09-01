@@ -519,36 +519,33 @@ public class ConnectionServiceImpl implements ConnectionService{
 					XDIAddress child1 = null;
 					XDIAddress child2 = null;																																								
 					CloudName connectionName = null;
-					boolean isBlocked1 = false;
-					boolean isBlocked2 = false;
-					boolean isApproved1 = false;
-					boolean isApproved2 = false;
-					String blockedBy1 = null;
-					String blockedBy2 = null;
 					
 					String deleteRenew = connectionRequest.getDeleteRenew();
 					String status = connectionRequest.getStatus();
-					boolean isApprovalRequired = false;														
 					
-					if(status.equals(Status.APPROVED.getStatus()) && deleteRenew == null){
+					if (collection.contains(connectionRequest.getConnectingClouds().getRequestingCloudNumber().toString()) && 
+							!(deleteRenew != null && deleteRenew.equals(DeleteRenew.DELETED_BY_REQUESTER.getDeleteRenew()))){
 						
-						isApproved1 = true;
-						isApproved2 = true;						
-					}
-									
-					if(connectionRequest.getApprovingCloudNumber() != null && 
-							connectionRequest.getApprovingCloudNumber().equals(parentDiscovery.getCloudNumber().toString())){
-						
-						isApprovalRequired = true;
-					}
-					
-					if (collection.contains(connectionRequest.getConnectingClouds().getRequestingCloudNumber().toString())){
-												
-						if(deleteRenew != null && deleteRenew.equals(DeleteRenew.DELETED_BY_REQUESTER.getDeleteRenew())){
-							LOGGER.info("Do not add connection request to view list if connection request is deleted by requester");
-							continue;
+						boolean isBlocked1 = false;
+						boolean isBlocked2 = false;
+						boolean isApproved1 = false;
+						boolean isApproved2 = false;
+						boolean isApprovalRequired = false;
+						String blockedBy1 = null;
+						String blockedBy2 = null;
+
+						if(status.equals(Status.APPROVED.getStatus()) && deleteRenew == null){
+
+							isApproved1 = true;
+							isApproved2 = true;
 						}
-						
+
+						if(connectionRequest.getApprovingCloudNumber() != null && 
+								connectionRequest.getApprovingCloudNumber().equals(parentDiscovery.getCloudNumber().toString())){
+
+							isApprovalRequired = true;
+						}
+
 						if(deleteRenew != null && deleteRenew.equals(DeleteRenew.RENEWED_BY_REQUESTER.getDeleteRenew())){
 							isApprovalRequired = true;
 						}
@@ -557,15 +554,19 @@ public class ConnectionServiceImpl implements ConnectionService{
 						connectionName = CloudName.create(connectionRequest.getAcceptingConnectionName());
 						
 						LOGGER.info("Checking ig connection is blocked by requester");
+
 						if(status.equals(Status.BLOCKED_BY_REQUESTER.getStatus())){
+
 							isBlocked1 = true;
 							isApproved2 = true;
 							blockedBy1 = connectionRequest.getBlockedByRequester();
 							
 						}else if(status.equals(Status.BLOCKED_BY_ACCEPTOR.getStatus())){
+
 							isBlocked2 = true;
 							isApproved1 = true;
 							blockedBy2 = connectionRequest.getBlockedByAcceptor();
+
 						}else if(status.equals(Status.BLOCKED.getStatus())){
 							
 							isBlocked1 = true;
@@ -589,6 +590,26 @@ public class ConnectionServiceImpl implements ConnectionService{
 						
 					}if (collection.contains(connectionRequest.getConnectingClouds().getAcceptingCloudNumber().toString())){
 						
+						boolean isBlocked1 = false;
+						boolean isBlocked2 = false;
+						boolean isApproved1 = false;
+						boolean isApproved2 = false;
+						boolean isApprovalRequired = false;
+						String blockedBy1 = null;
+						String blockedBy2 = null;
+
+						if(status.equals(Status.APPROVED.getStatus()) && deleteRenew == null){
+
+							isApproved1 = true;
+							isApproved2 = true;
+						}
+
+						if(connectionRequest.getApprovingCloudNumber() != null && 
+								connectionRequest.getApprovingCloudNumber().equals(parentDiscovery.getCloudNumber().toString())){
+
+							isApprovalRequired = true;
+						}
+
 						if(deleteRenew != null && deleteRenew.equals(DeleteRenew.DELETED_BY_ACCEPTOR.getDeleteRenew())){
 							LOGGER.info("Do not add connection request to view list if connection request is deleted by acceptor");
 							continue;
