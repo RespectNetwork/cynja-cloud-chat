@@ -98,15 +98,17 @@ public class ConnectionRequestDAOImpl extends
      * @see net.rn.clouds.chat.dao.ChatHistoryDAO#getNotification(java.lang.String)
      */
     @Override
-	public List<Connection> getNotification(String cloudNumber) {
+	public List<Object[]> getNotification(String cloudNumbers) {
     	
     	Session session = getSession();
     	Transaction transaction = session.beginTransaction();
     	
-    	List<Connection> connections = session.createQuery("from ConnectionRequest cr where "
-    			+ "(cr.connectingClouds.requestingCloudNumber='"+cloudNumber+"' and cr.connectionId in "
+    	List<Object[]> connections = session.createQuery("select cr.connectingClouds.requestingCloudNumber, cr.connectingClouds.acceptingCloudNumber, "
+    			+ "cr.requestingConnectionName, cr.acceptingConnectionName, cr.status, cr.deleteRenew,  (select distinct(ch.messageBy) from "
+    			+ "ChatMessage ch where ch.connection_id=cr.connectionId and ch.status='UNREAD' ) as messageBy from ConnectionRequest cr where "
+    			+ "(cr.connectingClouds.requestingCloudNumber in("+cloudNumbers+") and cr.connectionId in "
     					+ "(select ch.connection_id from ChatMessage ch where ch.status='UNREAD' and ch.messageBy!=cr.requestingConnectionName )) or "
-    			+"(cr.connectingClouds.acceptingCloudNumber='"+cloudNumber+"' and cr.connectionId in "
+    			+"(cr.connectingClouds.acceptingCloudNumber in("+cloudNumbers+") and cr.connectionId in "
     					+ "(select ch.connection_id from ChatMessage ch where ch.status='UNREAD' and ch.messageBy!=cr.acceptingConnectionName))").list();
     	transaction.commit();
     	session.close();

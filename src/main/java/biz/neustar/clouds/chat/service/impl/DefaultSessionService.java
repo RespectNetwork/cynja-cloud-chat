@@ -6,6 +6,7 @@ import java.util.Map;
 
 import javax.websocket.Session;
 
+import net.rn.clouds.chat.util.Utility;
 import biz.neustar.clouds.chat.model.Connection;
 import biz.neustar.clouds.chat.service.SessionService;
 
@@ -20,7 +21,7 @@ public class DefaultSessionService implements SessionService {
 	
 	public void addSession(Connection connection, Session session) {
 
-		int hashCode = connection.getChild1().hashCode() * connection.getChild2().hashCode();
+		int hashCode = Utility.getConnectionId(connection.getChild1(), connection.getChild2());
 		LinkedList<Session> sessionList = this.sessionMap.get(Integer.valueOf(hashCode));
 
 		if (sessionList == null) {

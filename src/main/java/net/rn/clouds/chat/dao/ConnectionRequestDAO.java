@@ -47,5 +47,5 @@ public interface ConnectionRequestDAO {
 	 * @param cloudNumber
 	 * @return List<Connection>
 	 */
-	public List<Connection> getNotification(String cloudNumber);
+	public List<Object[]> getNotification(String cloudNumbers);
 }

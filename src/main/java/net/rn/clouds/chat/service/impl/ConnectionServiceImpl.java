@@ -7,6 +7,7 @@ import java.security.GeneralSecurityException;
 import java.security.PrivateKey;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
@@ -14,14 +15,16 @@ import net.rn.clouds.chat.constants.ChatErrors;
 import net.rn.clouds.chat.constants.DeleteRenew;
 import net.rn.clouds.chat.constants.MessageStatus;
 import net.rn.clouds.chat.constants.Status;
-import net.rn.clouds.chat.dao.ConnectionRequestDAO;
 import net.rn.clouds.chat.dao.ConnectionProfileDAO;
-import net.rn.clouds.chat.dao.impl.ConnectionRequestDAOImpl;
+import net.rn.clouds.chat.dao.ConnectionRequestDAO;
+import net.rn.clouds.chat.dao.EntityCloudDAO;
 import net.rn.clouds.chat.dao.impl.ConnectionProfileDAOImpl;
+import net.rn.clouds.chat.dao.impl.ConnectionRequestDAOImpl;
+import net.rn.clouds.chat.dao.impl.EntityCloudHibernateDAO;
 import net.rn.clouds.chat.exceptions.ChatSystemException;
 import net.rn.clouds.chat.exceptions.ChatValidationException;
-import net.rn.clouds.chat.model.ConnectingClouds;
 import net.rn.clouds.chat.model.ChatMessage;
+import net.rn.clouds.chat.model.ConnectingClouds;
 import net.rn.clouds.chat.model.ConnectionProfile;
 import net.rn.clouds.chat.model.ConnectionRequest;
 import net.rn.clouds.chat.util.EntityUtil;
@@ -31,6 +34,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import xdi2.client.exceptions.Xdi2ClientException;
+import xdi2.client.impl.http.XDIHttpClient;
 import xdi2.client.util.XDIClientUtil;
 import xdi2.core.syntax.CloudName;
 import xdi2.core.syntax.XDIAddress;
@@ -42,7 +46,6 @@ import biz.neustar.clouds.chat.model.Connection;
 import biz.neustar.clouds.chat.model.Log;
 import biz.neustar.clouds.chat.model.QueryInfo;
 import biz.neustar.clouds.chat.service.ConnectionService;
-import xdi2.client.impl.http.XDIHttpClient;
 /**
  * @author Noopur Pandey
  *
@@ -311,6 +314,7 @@ public class ConnectionServiceImpl implements ConnectionService{
 
 					String requestingCloudNumber = connectionRequest.getConnectingClouds().getRequestingCloudNumber().toString();
 					String acceptingCloudNumber = connectionRequest.getConnectingClouds().getAcceptingCloudNumber().toString();
+					String approvingCloudNumber = connectionRequest.getApprovingCloudNumber();
 
 					String deleteRenew = connectionRequest.getDeleteRenew();
 					String status = connectionRequest.getStatus();
@@ -410,7 +414,7 @@ public class ConnectionServiceImpl implements ConnectionService{
 								throw new ChatValidationException(ChatErrors.ALREADY_APPROVED.getErrorCode(),ChatErrors.ALREADY_APPROVED.getErrorMessage());
 							}
 
-							if(!cloudNumber.equals(connectionRequest.getApprovingCloudNumber())){
+							if(!cloudNumber.equals(approvingCloudNumber)){
 								LOGGER.info("Cloud: {} is not authorized approver.", cloud.toString());
 								throw new ChatValidationException(ChatErrors.NOT_AUTHORIZED_TO_APPROVE.getErrorCode(),ChatErrors.NOT_AUTHORIZED_TO_APPROVE.getErrorMessage());
 							}
@@ -439,8 +443,17 @@ public class ConnectionServiceImpl implements ConnectionService{
 								}
 							}else{
 								if(status.equals(Status.NEW.getStatus())){
-									newStatus = Status.CLOUD_APPROVAL_PENDING.getStatus();
-									newApprover = acceptingCloudNumber;
+
+									if(acceptingCloudNumber.equals(approvingCloudNumber)){
+
+										newStatus = Status.APPROVED.getStatus();
+										newApprover = null;
+
+									}else{
+
+										newStatus = Status.CLOUD_APPROVAL_PENDING.getStatus();
+										newApprover = acceptingCloudNumber;
+									}
 								}
 								if(status.equals(Status.CLOUD_APPROVAL_PENDING.getStatus())){
 
@@ -1489,11 +1502,26 @@ public class ConnectionServiceImpl implements ConnectionService{
              XDIDiscoveryResult cloudDiscovery = authenticate(cloud, cloudSecretToken);
 
              String cloudNumber = cloudDiscovery.getCloudNumber().toString();
+             EntityCloudDAO entityCloudDAO = new EntityCloudHibernateDAO();
 
-             LOGGER.info("Getting unread message notification for cloud: {}", cloudNumber);
+             String allCloudNumbers = "";
+
+             List<String> dependentCloudNumbers =  entityCloudDAO.findDependentByGuardian(cloudNumber);
+
+             dependentCloudNumbers.add(cloudNumber);
+
+             Iterator<String> itr = dependentCloudNumbers.iterator();
+
+             while(itr.hasNext()){
+            	 allCloudNumbers+= "'"+itr.next()+"',";
+             }
+
+             allCloudNumbers = allCloudNumbers.substring(0, allCloudNumbers.length()-1);
+
+             LOGGER.info("Getting unread message notification for cloud: {}", allCloudNumbers);
  			 ConnectionRequestDAO connectionRequestDAO = new ConnectionRequestDAOImpl();
 
- 			 List<Connection> connectionRequestList = connectionRequestDAO.getNotification(cloudNumber);
+ 			 List<Object[]> connectionRequestList = connectionRequestDAO.getNotification(allCloudNumbers);
 
              if(connectionRequestList == null || connectionRequestList.size()==0){
 
@@ -1501,56 +1529,66 @@ public class ConnectionServiceImpl implements ConnectionService{
  				return new ConnectionImpl[0];
  			}
 
- 			for (Object obj : connectionRequestList) {
+            int size = connectionRequestList.size();
 
- 				if(obj instanceof ConnectionRequest){
- 					ConnectionRequest connectionRequest = (ConnectionRequest)obj;
+ 			for (int i = 0;i < size; i++) {
 
- 					XDIAddress cloud1;
- 					XDIAddress cloud2;
- 					CloudName connectionName;
+ 				Object obj[] = connectionRequestList.get(i);
 
- 					String deleteRenew = connectionRequest.getDeleteRenew();
- 					String status = connectionRequest.getStatus();
+ 				XDIAddress cloud1 = null;
+ 				XDIAddress cloud2 = null;
+ 				CloudName connectionName = null;
 
- 					if (cloudNumber.equals(connectionRequest.getConnectingClouds().getRequestingCloudNumber().toString())){
+ 				String requestingCloudNumber = (String)obj[0];
+ 				String acceptingCloudNumber = (String)obj[1];
+ 				String requestingConnectionName = (String)obj[2];
+ 				String acceptingConnectionName = (String)obj[3];
+ 				String status = (String)obj[4];
+ 				String deleteRenew =  (String)obj[5];
+ 				String messageBy = (String)obj[6];
 
- 						if(deleteRenew !=null && (deleteRenew.equals(DeleteRenew.DELETED_BY_REQUESTER.getDeleteRenew()) 
- 								|| deleteRenew.equals(DeleteRenew.RENEWED_BY_REQUESTER.getDeleteRenew()))){
- 							LOGGER.info("Do not add unread message notification to view list if connection request is deleted by requester");
- 							continue;
- 						}
+ 				if (dependentCloudNumbers.contains(requestingCloudNumber) && !messageBy.equals(requestingConnectionName)
+ 						&& !messageBy.equals(requestingCloudNumber)){
 
- 						if(status.equals(Status.BLOCKED) || status.equals(Status.BLOCKED_BY_REQUESTER)){
- 							LOGGER.info("Do not add unread message notification to view list if connection request is blocked by requester");
- 							continue;
- 						}
-
- 						cloud1 = XDIAddress.create(connectionRequest.getConnectingClouds().getRequestingCloudNumber());
-						cloud2 = XDIAddress.create(connectionRequest.getConnectingClouds().getAcceptingCloudNumber());
- 						connectionName = CloudName.create(connectionRequest.getAcceptingConnectionName());
- 					}else{
-
- 						if(deleteRenew !=null && (deleteRenew.equals(DeleteRenew.DELETED_BY_ACCEPTOR.getDeleteRenew()) 
- 								|| deleteRenew.equals(DeleteRenew.RENEWED_BY_ACCEPTOR.getDeleteRenew()))){
- 							LOGGER.info("Do not add unread message notification to view list if connection request is deleted by requester");
- 							continue;
- 						}
-
- 						if(status.equals(Status.BLOCKED) || status.equals(Status.BLOCKED_BY_REQUESTER)){
- 							LOGGER.info("Do not add unread message notification to view list if connection request is blocked by requester");
- 							continue;
- 						}
-
- 						cloud1 = XDIAddress.create(connectionRequest.getConnectingClouds().getAcceptingCloudNumber());
-						cloud2 = XDIAddress.create(connectionRequest.getConnectingClouds().getRequestingCloudNumber());
- 						connectionName = CloudName.create(connectionRequest.getRequestingConnectionName());
+ 					if(deleteRenew !=null && (deleteRenew.equals(DeleteRenew.DELETED_BY_REQUESTER.getDeleteRenew()) 
+ 							|| deleteRenew.equals(DeleteRenew.RENEWED_BY_REQUESTER.getDeleteRenew()))){
+ 						LOGGER.info("Do not add unread message notification to view list if connection request is deleted by requester");
+ 						continue;
  					}
 
- 					Connection connection = new ConnectionImpl(cloud1, cloud2, connectionName);
-					connectionList.add(connection);
+ 					if(status.equals(Status.BLOCKED) || status.equals(Status.BLOCKED_BY_REQUESTER)){
+ 						LOGGER.info("Do not add unread message notification to view list if connection request is blocked by requester");
+ 						continue;
+ 					}
+
+ 					cloud1 = XDIAddress.create(requestingCloudNumber);
+ 					cloud2 = XDIAddress.create(acceptingCloudNumber);
+ 					connectionName = CloudName.create(acceptingConnectionName);
  				}
+
+ 				if (dependentCloudNumbers.contains(acceptingCloudNumber) && !messageBy.equals(acceptingConnectionName)
+ 						&& !messageBy.equals(acceptingCloudNumber)){
+
+ 					if(deleteRenew !=null && (deleteRenew.equals(DeleteRenew.DELETED_BY_ACCEPTOR.getDeleteRenew()) 
+ 							|| deleteRenew.equals(DeleteRenew.RENEWED_BY_ACCEPTOR.getDeleteRenew()))){
+ 						LOGGER.info("Do not add unread message notification to view list if connection request is deleted by requester");
+ 						continue;
+ 					}
+
+ 					if(status.equals(Status.BLOCKED) || status.equals(Status.BLOCKED_BY_REQUESTER)){
+ 						LOGGER.info("Do not add unread message notification to view list if connection request is blocked by requester");
+ 						continue;
+ 					}
+
+ 					cloud1 = XDIAddress.create(acceptingCloudNumber);
+ 					cloud2 = XDIAddress.create(requestingCloudNumber);
+ 					connectionName = CloudName.create(requestingConnectionName);
+ 				}
+
+ 				Connection connection = new ConnectionImpl(cloud1, cloud2, connectionName);
+ 				connectionList.add(connection);
  			}
+
              Connection[] connections = new ConnectionImpl[connectionList.size()];
      		 return connectionList.toArray(connections);
 
