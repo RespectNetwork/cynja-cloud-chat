@@ -756,4 +756,22 @@ public class XdiConnectionService implements ConnectionService {
         // TODO Auto-generated method stub
         return null;
     }
+
+    /* (non-Javadoc)
+     * @see biz.neustar.clouds.chat.service.ConnectionService#notifications(xdi2.core.syntax.XDIAddress, java.lang.String)
+     */
+    @Override
+    public Connection[] notifications(XDIAddress cloud, String cloudSecretToken) {
+    	// TODO Auto-generated method stub
+    	return null;
+    }
+
+    /* (non-Javadoc)
+     * @see biz.neustar.clouds.chat.service.ConnectionService#updateChatStatus(xdi2.core.syntax.XDIAddress, java.util.List)
+     */
+    @Override
+    public void updateChatStatus(XDIAddress child1,
+    		List<ChatMessage> chatMessageList) {
+    	// TODO Auto-generated method stub
+    }
 }

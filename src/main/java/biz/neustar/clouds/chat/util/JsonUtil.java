@@ -8,6 +8,10 @@ import javax.websocket.Session;
 
 import net.rn.clouds.chat.model.ChatMessage;
 import net.rn.clouds.chat.service.impl.ConnectionImpl;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import biz.neustar.clouds.chat.CynjaCloudChat;
 import biz.neustar.clouds.chat.model.Connection;
 import biz.neustar.clouds.chat.model.Log;
@@ -22,6 +26,7 @@ import com.google.gson.stream.JsonWriter;
 
 public class JsonUtil {
 
+	private static final Logger LOGGER = LoggerFactory.getLogger(JsonUtil.class);
 	private static final Gson gson = new GsonBuilder()
 	.setDateFormat(DateFormat.FULL, DateFormat.FULL)
 	.disableHtmlEscaping()
@@ -30,21 +35,26 @@ public class JsonUtil {
 
 	public static String toString(JsonElement jsonElement) {
 
+		LOGGER.info("Enter JsonUtil.toString()");
 		StringWriter stringWriter = new StringWriter();
 		JsonWriter jsonWriter = new JsonWriter(stringWriter);
 		gson.toJson(jsonElement, jsonWriter);
+		LOGGER.info("Exit JsonUtil.toString()");
 		return stringWriter.getBuffer().toString();
 	}
 
 	public static void write(Writer writer, JsonElement jsonElement) {
 
+		LOGGER.info("Enter JsonUtil.write()");
 		JsonWriter jsonWriter = new JsonWriter(writer);
 		jsonWriter.setIndent("  ");
 		gson.toJson(jsonElement, jsonWriter);
+		LOGGER.info("Exit JsonUtil.write()");
 	}
 
 	public static JsonObject connectionsToJson(Connection[] connections) {
 
+		LOGGER.info("Enter JsonUtil.connectionsToJson()");
 		JsonObject childrenJsonObject = new JsonObject();
 
 		for (Connection connection : connections) {
@@ -87,12 +97,14 @@ public class JsonUtil {
 
 			childJsonArray.add(child1JsonObject);
 		}
+		LOGGER.info("Exit JsonUtil.connectionsToJson()");
 
 		return childrenJsonObject;
 	}
 	
 	public static JsonObject connectionToJson(Connection[] connections) {
 
+		LOGGER.info("Enter JsonUtil.connectionToJson()");
 		JsonObject childrenJsonObject = new JsonObject();
 
 		for (Connection connection : connections) {
@@ -107,6 +119,7 @@ public class JsonUtil {
 			JsonArray childJsonArray = childrenJsonObject.getAsJsonArray(connectionImpl.getChild1().toString());
 
 			if (childJsonArray == null) {
+				LOGGER.info("Creating connection array for cloud: {}", connectionImpl.getChild1().toString());
 
 				childJsonArray = new JsonArray();
 				childrenJsonObject.add(connectionImpl.getChild1().toString(), childJsonArray);
@@ -123,13 +136,14 @@ public class JsonUtil {
 			child1JsonObject.add("lastName", gson.toJsonTree(connectionImpl.getLastName()));
 			child1JsonObject.add("nickName", gson.toJsonTree(connectionImpl.getNickName()));
 			child1JsonObject.add("avatar", gson.toJsonTree(connectionImpl.getAvatar()));
+			LOGGER.info("child1JsonObject: {}", child1JsonObject.toString());
 
 			Session[] sessions = CynjaCloudChat.sessionService.getSessions(connectionImpl);
 
 			JsonArray sessionsJsonArray = new JsonArray();
 
 			for (Session session : sessions) {
-
+				LOGGER.info("session object: {}", sessions.toString());
 				JsonObject sessionJsonObject = new JsonObject();
 				sessionJsonObject.add("id", gson.toJsonTree(session.getId()));
 				sessionJsonObject.add("open", gson.toJsonTree(session.isOpen()));
@@ -141,6 +155,7 @@ public class JsonUtil {
 
 			childJsonArray.add(child1JsonObject);
 		}
+		LOGGER.info("Exit JsonUtil.connectionToJson()");
 
 		return childrenJsonObject;
 	}
@@ -160,7 +175,7 @@ public class JsonUtil {
 	
 	public static JsonObject chatHistoryToJson(ChatMessage log) {
 
-        JsonObject logJsonObject = new JsonObject();
+		JsonObject logJsonObject = new JsonObject();
         logJsonObject.add("messageId", new JsonPrimitive(log.getChatHistoryId()));
         logJsonObject.add("messageBy", new JsonPrimitive(log.getMessageBy()));
         logJsonObject.add("message", new JsonPrimitive(log.getMessage()));
@@ -168,4 +183,37 @@ public class JsonUtil {
 
         return logJsonObject;
     }
+
+	public static JsonObject notificationToJson(Connection[] connections) {
+
+		LOGGER.info("Enter JsonUtil.notificationToJson()");
+		JsonObject notificationJsonObject = new JsonObject();
+
+		for (Connection connection : connections) {
+
+			ConnectionImpl connectionImpl = null;
+			if(connection == null){
+				continue;
+			}else if(connection instanceof ConnectionImpl){
+				connectionImpl = (ConnectionImpl)connection;
+			}
+
+			JsonArray cloudJsonArray = notificationJsonObject.getAsJsonArray(connectionImpl.getChild1().toString());
+
+			if (cloudJsonArray == null) {
+
+				LOGGER.info("Creating JSON array of message notification for cloud: {}",connectionImpl.getChild1().toString());
+				cloudJsonArray = new JsonArray();
+				notificationJsonObject.add(connectionImpl.getChild1().toString(), cloudJsonArray);
+			}
+
+			JsonObject child1JsonObject = new JsonObject();
+			child1JsonObject.add("cloud", gson.toJsonTree(connectionImpl.getChild2().toString()));			
+			child1JsonObject.add("name", gson.toJsonTree(connectionImpl.getConnectionName().toString()));
+			cloudJsonArray.add(child1JsonObject);
+		}
+		LOGGER.info("Exit JsonUtil.notificationToJson()");
+
+		return notificationJsonObject;
+	}
 }

@@ -7,28 +7,34 @@ import java.security.GeneralSecurityException;
 import java.security.PrivateKey;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
 import net.rn.clouds.chat.constants.ChatErrors;
 import net.rn.clouds.chat.constants.DeleteRenew;
+import net.rn.clouds.chat.constants.MessageStatus;
 import net.rn.clouds.chat.constants.Status;
-import net.rn.clouds.chat.dao.ConnectionRequestDAO;
 import net.rn.clouds.chat.dao.ConnectionProfileDAO;
-import net.rn.clouds.chat.dao.impl.ConnectionRequestDAOImpl;
+import net.rn.clouds.chat.dao.ConnectionRequestDAO;
+import net.rn.clouds.chat.dao.EntityCloudDAO;
 import net.rn.clouds.chat.dao.impl.ConnectionProfileDAOImpl;
+import net.rn.clouds.chat.dao.impl.ConnectionRequestDAOImpl;
+import net.rn.clouds.chat.dao.impl.EntityCloudHibernateDAO;
 import net.rn.clouds.chat.exceptions.ChatSystemException;
 import net.rn.clouds.chat.exceptions.ChatValidationException;
-import net.rn.clouds.chat.model.ConnectingClouds;
 import net.rn.clouds.chat.model.ChatMessage;
+import net.rn.clouds.chat.model.ConnectingClouds;
 import net.rn.clouds.chat.model.ConnectionProfile;
 import net.rn.clouds.chat.model.ConnectionRequest;
 import net.rn.clouds.chat.util.EntityUtil;
+import net.rn.clouds.chat.util.Utility;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import xdi2.client.exceptions.Xdi2ClientException;
+import xdi2.client.impl.http.XDIHttpClient;
 import xdi2.client.util.XDIClientUtil;
 import xdi2.core.syntax.CloudName;
 import xdi2.core.syntax.XDIAddress;
@@ -40,7 +46,6 @@ import biz.neustar.clouds.chat.model.Connection;
 import biz.neustar.clouds.chat.model.Log;
 import biz.neustar.clouds.chat.model.QueryInfo;
 import biz.neustar.clouds.chat.service.ConnectionService;
-import xdi2.client.impl.http.XDIHttpClient;
 /**
  * @author Noopur Pandey
  *
@@ -159,6 +164,7 @@ public class ConnectionServiceImpl implements ConnectionService{
 						}else if(status.equals(Status.BLOCKED.getStatus()) || 
 								(acceptingCloudNumber.equals(cloud1Number) && status.equals(Status.BLOCKED_BY_ACCEPTOR.getStatus())) ||
 								(requestingCloudNumber.equals(cloud1Number) && status.equals(Status.BLOCKED_BY_REQUESTER.getStatus()))){
+
 							LOGGER.info("Connection already requested between {} and {} and is in blocked state", cloud1.toString(), cloud2.toString());
 							throw new ChatValidationException(ChatErrors.CONNECTION_BLOCKED.getErrorCode(), ChatErrors.CONNECTION_BLOCKED.getErrorMessage());
 						}
@@ -247,6 +253,9 @@ public class ConnectionServiceImpl implements ConnectionService{
 				connectionRequest.setApprovingCloudNumber(approvingCloudNumber);
 				connectionRequest.setStatus(status);
 
+				Integer connection_id = Utility.getConnectionId(cloud1, cloud2);
+				connectionRequest.setConnectionId(connection_id);
+
 				LOGGER.info("Saving new connection request");
 				connectionRequestDAO.requestConnection(connectionRequest);
 			}
@@ -305,6 +314,7 @@ public class ConnectionServiceImpl implements ConnectionService{
 
 					String requestingCloudNumber = connectionRequest.getConnectingClouds().getRequestingCloudNumber().toString();
 					String acceptingCloudNumber = connectionRequest.getConnectingClouds().getAcceptingCloudNumber().toString();
+					String approvingCloudNumber = connectionRequest.getApprovingCloudNumber();
 
 					String deleteRenew = connectionRequest.getDeleteRenew();
 					String status = connectionRequest.getStatus();
@@ -314,106 +324,146 @@ public class ConnectionServiceImpl implements ConnectionService{
 					String requestingCloudParent = EntityUtil.getGuardianCloudNumber(requestingCloudNumber);
 					String acceptingCloudParent = EntityUtil.getGuardianCloudNumber(acceptingCloudNumber);
 
-					if(deleteRenew != null && (!guardianCloudNumber.equals(""))){
+					if(!guardianCloudNumber.equals("") && guardianCloudNumber.equals(cloudNumber) && requestingCloudParent.equals(acceptingCloudParent)){
 
-						if(!cloudNumber.equals(guardianCloudNumber)){
+						if(status.equals(Status.NEW.getStatus()) && cloud1CloudNumber.equals(requestingCloudNumber)){
 
+							connectionRequest.setStatus(Status.CHILD_APPROVAL_PENDING.getStatus());
+							connectionRequest.setApprovingCloudNumber(acceptingCloudNumber);
+
+						}else if (deleteRenew != null && 
+								((cloud1CloudNumber.equals(requestingCloudNumber) && deleteRenew.equals(DeleteRenew.RENEWED_BY_REQUESTER.getDeleteRenew())) || 
+										(cloud1CloudNumber.equals(acceptingCloudNumber) && deleteRenew.equals(DeleteRenew.RENEWED_BY_ACCEPTOR.getDeleteRenew())))){
+
+							connectionRequest.setStatus(Status.APPROVED.getStatus());
+							connectionRequest.setApprovingCloudNumber(null);
+							connectionRequest.setDeleteRenew(null);
+
+						}else if(status.equals(Status.APPROVED.getStatus())){
+
+								LOGGER.info("connection request is already approved");
+								throw new ChatValidationException(ChatErrors.ALREADY_APPROVED.getErrorCode(),ChatErrors.ALREADY_APPROVED.getErrorMessage());
+
+						}else if(status.equals(Status.BLOCKED.getStatus()) || 
+									(cloud1CloudNumber.equals(requestingCloudNumber) && status.equals(Status.BLOCKED_BY_REQUESTER.getStatus())) ||
+									(cloud1CloudNumber.equals(acceptingCloudNumber) && status.equals(Status.BLOCKED_BY_ACCEPTOR.getStatus()))){
+
+						}else{
 							LOGGER.info("Cloud: {} is not authorized approver.", cloud.toString());
 							throw new ChatValidationException(ChatErrors.NOT_AUTHORIZED_TO_APPROVE.getErrorCode(),ChatErrors.NOT_AUTHORIZED_TO_APPROVE.getErrorMessage());
-						}
-						if(guardianCloudNumber.equals(requestingCloudParent)){
-
-							if(status.equals(Status.NEW.getStatus()) && deleteRenew.equals(DeleteRenew.RENEWED_BY_ACCEPTOR.getDeleteRenew())){
-
-								connectionRequest.setStatus(Status.CLOUD_APPROVAL_PENDING.getStatus());
-								connectionRequest.setApprovingCloudNumber(acceptingCloudParent);
-
-							}else if(status.equals(Status.NEW.getStatus()) && deleteRenew.equals(DeleteRenew.RENEWED_BY_REQUESTER.getDeleteRenew())){
-
-								connectionRequest.setStatus(Status.APPROVED.getStatus());
-								connectionRequest.setApprovingCloudNumber(null);
-								connectionRequest.setDeleteRenew(null);
-
-							}else if(deleteRenew.equals(DeleteRenew.RENEWED_BY_REQUESTER.getDeleteRenew())){
-
-								connectionRequest.setDeleteRenew(null);
-
-							}else{
-
-								LOGGER.info("Cloud: {} is not authorized approver.", cloud.toString());
-								throw new ChatValidationException(ChatErrors.NOT_AUTHORIZED_TO_APPROVE.getErrorCode(),ChatErrors.NOT_AUTHORIZED_TO_APPROVE.getErrorMessage());
-							}
-
-						}else if(guardianCloudNumber.equals(acceptingCloudParent)){
-
-							if(status.equals(Status.NEW.getStatus()) && deleteRenew.equals(DeleteRenew.RENEWED_BY_ACCEPTOR.getDeleteRenew())){
-
-								connectionRequest.setDeleteRenew(DeleteRenew.RENEWED_BY_REQUESTER.getDeleteRenew());
-
-							}else if(status.equals(Status.CLOUD_APPROVAL_PENDING.getStatus()) && deleteRenew.equals(DeleteRenew.RENEWED_BY_ACCEPTOR.getDeleteRenew())){
-
-								connectionRequest.setStatus(Status.APPROVED.getStatus());
-								connectionRequest.setApprovingCloudNumber(null);
-								connectionRequest.setDeleteRenew(null);
-
-							}else if(deleteRenew.equals(DeleteRenew.RENEWED_BY_ACCEPTOR.getDeleteRenew())){
-
-								connectionRequest.setDeleteRenew(null);
-
-							}else{
-
-								LOGGER.info("Cloud: {} is not authorized approver.", cloud.toString());
-								throw new ChatValidationException(ChatErrors.NOT_AUTHORIZED_TO_APPROVE.getErrorCode(),ChatErrors.NOT_AUTHORIZED_TO_APPROVE.getErrorMessage());
-							}
 						}
 					}else{
 
-						if(status.equals(Status.APPROVED.getStatus()) || status.equals(Status.BLOCKED.getStatus()) ||
-								status.equals(Status.BLOCKED_BY_ACCEPTOR.getStatus()) || status.equals(Status.BLOCKED_BY_REQUESTER.getStatus())){
-							LOGGER.info("connection request is already approved");
-							throw new ChatValidationException(ChatErrors.ALREADY_APPROVED.getErrorCode(),ChatErrors.ALREADY_APPROVED.getErrorMessage());
-						}
+						if(deleteRenew != null && (!guardianCloudNumber.equals(""))){
 
-						if(!cloudNumber.equals(connectionRequest.getApprovingCloudNumber())){
-							LOGGER.info("Cloud: {} is not authorized approver.", cloud.toString());
-							throw new ChatValidationException(ChatErrors.NOT_AUTHORIZED_TO_APPROVE.getErrorCode(),ChatErrors.NOT_AUTHORIZED_TO_APPROVE.getErrorMessage());
-						}											
+							if(!cloudNumber.equals(guardianCloudNumber)){
 
-						if(deleteRenew != null && deleteRenew.equals(DeleteRenew.RENEWED_BY_ACCEPTOR.getDeleteRenew())){
+								LOGGER.info("Cloud: {} is not authorized approver.", cloud.toString());
+								throw new ChatValidationException(ChatErrors.NOT_AUTHORIZED_TO_APPROVE.getErrorCode(),ChatErrors.NOT_AUTHORIZED_TO_APPROVE.getErrorMessage());
+							}
+							if(guardianCloudNumber.equals(requestingCloudParent)){
 
-							newStatus = Status.APPROVED.getStatus();
-							newApprover = null;
+								if(status.equals(Status.NEW.getStatus()) && deleteRenew.equals(DeleteRenew.RENEWED_BY_ACCEPTOR.getDeleteRenew())){
 
-						}else if(!acceptingCloudParent.equals("")){
+									connectionRequest.setStatus(Status.CLOUD_APPROVAL_PENDING.getStatus());
+									connectionRequest.setApprovingCloudNumber(acceptingCloudParent);
 
-							if(status.equals(Status.NEW.getStatus())){
+								}else if(status.equals(Status.NEW.getStatus()) && deleteRenew.equals(DeleteRenew.RENEWED_BY_REQUESTER.getDeleteRenew())){
 
-								newStatus = Status.CLOUD_APPROVAL_PENDING.getStatus();
-								newApprover =  acceptingCloudParent;
+									connectionRequest.setStatus(Status.APPROVED.getStatus());
+									connectionRequest.setApprovingCloudNumber(null);
+									connectionRequest.setDeleteRenew(null);
 
-							}else if(status.equals(Status.CLOUD_APPROVAL_PENDING.getStatus())){
+								}else if(deleteRenew.equals(DeleteRenew.RENEWED_BY_REQUESTER.getDeleteRenew())){
 
-								newStatus = Status.CHILD_APPROVAL_PENDING.getStatus();
-								newApprover = acceptingCloudNumber;
+									connectionRequest.setDeleteRenew(null);
 
-							}else if(status.equals(Status.CHILD_APPROVAL_PENDING.getStatus())){
+								}else{
 
-								newStatus = Status.APPROVED.getStatus();
-								newApprover = null;
+									LOGGER.info("Cloud: {} is not authorized approver.", cloud.toString());
+									throw new ChatValidationException(ChatErrors.NOT_AUTHORIZED_TO_APPROVE.getErrorCode(),ChatErrors.NOT_AUTHORIZED_TO_APPROVE.getErrorMessage());
+								}
+
+							}else if(guardianCloudNumber.equals(acceptingCloudParent)){
+
+								if(status.equals(Status.NEW.getStatus()) && deleteRenew.equals(DeleteRenew.RENEWED_BY_ACCEPTOR.getDeleteRenew())){
+
+									connectionRequest.setDeleteRenew(DeleteRenew.RENEWED_BY_REQUESTER.getDeleteRenew());
+
+								}else if(status.equals(Status.CLOUD_APPROVAL_PENDING.getStatus()) && deleteRenew.equals(DeleteRenew.RENEWED_BY_ACCEPTOR.getDeleteRenew())){
+
+									connectionRequest.setStatus(Status.APPROVED.getStatus());
+									connectionRequest.setApprovingCloudNumber(null);
+									connectionRequest.setDeleteRenew(null);
+
+								}else if(deleteRenew.equals(DeleteRenew.RENEWED_BY_ACCEPTOR.getDeleteRenew())){
+
+									connectionRequest.setDeleteRenew(null);
+
+								}else{
+
+									LOGGER.info("Cloud: {} is not authorized approver.", cloud.toString());
+									throw new ChatValidationException(ChatErrors.NOT_AUTHORIZED_TO_APPROVE.getErrorCode(),ChatErrors.NOT_AUTHORIZED_TO_APPROVE.getErrorMessage());
+								}
 							}
 						}else{
-							if(status.equals(Status.NEW.getStatus())){
-								newStatus = Status.CLOUD_APPROVAL_PENDING.getStatus();
-								newApprover = acceptingCloudNumber;
+
+							if(status.equals(Status.APPROVED.getStatus()) || status.equals(Status.BLOCKED.getStatus()) ||
+									status.equals(Status.BLOCKED_BY_ACCEPTOR.getStatus()) || status.equals(Status.BLOCKED_BY_REQUESTER.getStatus())){
+								LOGGER.info("connection request is already approved");
+								throw new ChatValidationException(ChatErrors.ALREADY_APPROVED.getErrorCode(),ChatErrors.ALREADY_APPROVED.getErrorMessage());
 							}
-							if(status.equals(Status.CLOUD_APPROVAL_PENDING.getStatus())){
+
+							if(!cloudNumber.equals(approvingCloudNumber)){
+								LOGGER.info("Cloud: {} is not authorized approver.", cloud.toString());
+								throw new ChatValidationException(ChatErrors.NOT_AUTHORIZED_TO_APPROVE.getErrorCode(),ChatErrors.NOT_AUTHORIZED_TO_APPROVE.getErrorMessage());
+							}
+
+							if(deleteRenew != null && deleteRenew.equals(DeleteRenew.RENEWED_BY_ACCEPTOR.getDeleteRenew())){
 
 								newStatus = Status.APPROVED.getStatus();
 								newApprover = null;
+
+							}else if(!acceptingCloudParent.equals("")){
+
+								if(status.equals(Status.NEW.getStatus())){
+
+									newStatus = Status.CLOUD_APPROVAL_PENDING.getStatus();
+									newApprover =  acceptingCloudParent;
+
+								}else if(status.equals(Status.CLOUD_APPROVAL_PENDING.getStatus())){
+
+									newStatus = Status.CHILD_APPROVAL_PENDING.getStatus();
+									newApprover = acceptingCloudNumber;
+
+								}else if(status.equals(Status.CHILD_APPROVAL_PENDING.getStatus())){
+
+									newStatus = Status.APPROVED.getStatus();
+									newApprover = null;
+								}
+							}else{
+								if(status.equals(Status.NEW.getStatus())){
+
+									if(acceptingCloudNumber.equals(approvingCloudNumber)){
+
+										newStatus = Status.APPROVED.getStatus();
+										newApprover = null;
+
+									}else{
+
+										newStatus = Status.CLOUD_APPROVAL_PENDING.getStatus();
+										newApprover = acceptingCloudNumber;
+									}
+								}
+								if(status.equals(Status.CLOUD_APPROVAL_PENDING.getStatus())){
+
+									newStatus = Status.APPROVED.getStatus();
+									newApprover = null;
+								}
 							}
+							connectionRequest.setApprovingCloudNumber(newApprover);
+							connectionRequest.setStatus(newStatus);
 						}
-						connectionRequest.setApprovingCloudNumber(newApprover);
-						connectionRequest.setStatus(newStatus);
 					}
 
 					LOGGER.info("Upating connection request");
@@ -482,36 +532,33 @@ public class ConnectionServiceImpl implements ConnectionService{
 					XDIAddress child1 = null;
 					XDIAddress child2 = null;																																								
 					CloudName connectionName = null;
-					boolean isBlocked1 = false;
-					boolean isBlocked2 = false;
-					boolean isApproved1 = false;
-					boolean isApproved2 = false;
-					String blockedBy1 = null;
-					String blockedBy2 = null;
 					
 					String deleteRenew = connectionRequest.getDeleteRenew();
 					String status = connectionRequest.getStatus();
-					boolean isApprovalRequired = false;														
 					
-					if(status.equals(Status.APPROVED.getStatus()) && deleteRenew == null){
+					if (collection.contains(connectionRequest.getConnectingClouds().getRequestingCloudNumber().toString()) && 
+							!(deleteRenew != null && deleteRenew.equals(DeleteRenew.DELETED_BY_REQUESTER.getDeleteRenew()))){
 						
-						isApproved1 = true;
-						isApproved2 = true;						
-					}
-									
-					if(connectionRequest.getApprovingCloudNumber() != null && 
-							connectionRequest.getApprovingCloudNumber().equals(parentDiscovery.getCloudNumber().toString())){
-						
-						isApprovalRequired = true;
-					}
-					
-					if (collection.contains(connectionRequest.getConnectingClouds().getRequestingCloudNumber().toString())){
-												
-						if(deleteRenew != null && deleteRenew.equals(DeleteRenew.DELETED_BY_REQUESTER.getDeleteRenew())){
-							LOGGER.info("Do not add connection request to view list if connection request is deleted by requester");
-							continue;
+						boolean isBlocked1 = false;
+						boolean isBlocked2 = false;
+						boolean isApproved1 = false;
+						boolean isApproved2 = false;
+						boolean isApprovalRequired = false;
+						String blockedBy1 = null;
+						String blockedBy2 = null;
+
+						if(status.equals(Status.APPROVED.getStatus()) && deleteRenew == null){
+
+							isApproved1 = true;
+							isApproved2 = true;
 						}
-						
+
+						if(connectionRequest.getApprovingCloudNumber() != null && 
+								connectionRequest.getApprovingCloudNumber().equals(parentDiscovery.getCloudNumber().toString())){
+
+							isApprovalRequired = true;
+						}
+
 						if(deleteRenew != null && deleteRenew.equals(DeleteRenew.RENEWED_BY_REQUESTER.getDeleteRenew())){
 							isApprovalRequired = true;
 						}
@@ -520,15 +567,19 @@ public class ConnectionServiceImpl implements ConnectionService{
 						connectionName = CloudName.create(connectionRequest.getAcceptingConnectionName());
 						
 						LOGGER.info("Checking ig connection is blocked by requester");
+
 						if(status.equals(Status.BLOCKED_BY_REQUESTER.getStatus())){
+
 							isBlocked1 = true;
 							isApproved2 = true;
 							blockedBy1 = connectionRequest.getBlockedByRequester();
 							
 						}else if(status.equals(Status.BLOCKED_BY_ACCEPTOR.getStatus())){
+
 							isBlocked2 = true;
 							isApproved1 = true;
 							blockedBy2 = connectionRequest.getBlockedByAcceptor();
+
 						}else if(status.equals(Status.BLOCKED.getStatus())){
 							
 							isBlocked1 = true;
@@ -552,6 +603,26 @@ public class ConnectionServiceImpl implements ConnectionService{
 						
 					}if (collection.contains(connectionRequest.getConnectingClouds().getAcceptingCloudNumber().toString())){
 						
+						boolean isBlocked1 = false;
+						boolean isBlocked2 = false;
+						boolean isApproved1 = false;
+						boolean isApproved2 = false;
+						boolean isApprovalRequired = false;
+						String blockedBy1 = null;
+						String blockedBy2 = null;
+
+						if(status.equals(Status.APPROVED.getStatus()) && deleteRenew == null){
+
+							isApproved1 = true;
+							isApproved2 = true;
+						}
+
+						if(connectionRequest.getApprovingCloudNumber() != null && 
+								connectionRequest.getApprovingCloudNumber().equals(parentDiscovery.getCloudNumber().toString())){
+
+							isApprovalRequired = true;
+						}
+
 						if(deleteRenew != null && deleteRenew.equals(DeleteRenew.DELETED_BY_ACCEPTOR.getDeleteRenew())){
 							LOGGER.info("Do not add connection request to view list if connection request is deleted by acceptor");
 							continue;
@@ -837,12 +908,12 @@ public class ConnectionServiceImpl implements ConnectionService{
 		try {
 			
 			XDIDiscoveryResult cloudDiscovery = authenticate(cloud, cloudSecretToken);
-			XDIDiscoveryResult cloud1Discovery = getXDIDiscovery(cloud1);			
+			XDIDiscoveryResult cloud1Discovery = getXDIDiscovery(cloud1);
 			
 			String cloudNumber = cloudDiscovery.getCloudNumber().toString();
 			String cloud1CloudNumber = cloud1Discovery.getCloudNumber().toString();
 			String cloud1Guardian = EntityUtil.getGuardianCloudNumber(cloud1CloudNumber);
-			
+
 			if(!cloudNumber.equals(cloud1CloudNumber) && !cloudNumber.equals(cloud1Guardian)){
 				LOGGER.info("Invalid cloud1 provided");
 				throw new ChatValidationException(ChatErrors.INVALID_CLOUD_PROVIDED.getErrorCode(),ChatErrors.INVALID_CLOUD_PROVIDED.getErrorMessage());
@@ -1153,8 +1224,8 @@ public class ConnectionServiceImpl implements ConnectionService{
 					String status = connectionRequest.getStatus();
 					String deleteRenew = connectionRequest.getDeleteRenew();
 					String requestingCloudNumber = connectionRequest.getConnectingClouds().getRequestingCloudNumber().toString();
-					String acceptingCloudNumber = connectionRequest.getConnectingClouds().getAcceptingCloudNumber().toString();										
-					
+					String acceptingCloudNumber = connectionRequest.getConnectingClouds().getAcceptingCloudNumber().toString();
+
 					if(deleteRenew == null && (status.equals(Status.NEW.getStatus()) || status.equals(Status.CLOUD_APPROVAL_PENDING.getStatus()) 
 							|| status.equals(Status.CHILD_APPROVAL_PENDING.getStatus()))){
 						
@@ -1168,8 +1239,8 @@ public class ConnectionServiceImpl implements ConnectionService{
 
 							LOGGER.info("Deleteing connection reuest from DB");
 							connectionRequestDAO.deleteRequest(connectionRequest);
-						}
-						if(deleteRenew==null || (deleteRenew != null && deleteRenew.equals(DeleteRenew.RENEWED_BY_REQUESTER.getDeleteRenew()))){
+
+						}else if(deleteRenew==null || (deleteRenew != null && deleteRenew.equals(DeleteRenew.RENEWED_BY_REQUESTER.getDeleteRenew()))){
 
 							LOGGER.info("Deleting connection request by reuquester");
 							connectionRequest.setDeleteRenew(DeleteRenew.DELETED_BY_REQUESTER.getDeleteRenew());
@@ -1213,7 +1284,7 @@ public class ConnectionServiceImpl implements ConnectionService{
 
 							LOGGER.info("Deleteing connection reuest from DB");
 							connectionRequestDAO.deleteRequest(connectionRequest);
-							
+
 						}else if(deleteRenew==null || (deleteRenew != null && deleteRenew.equals(DeleteRenew.RENEWED_BY_ACCEPTOR.getDeleteRenew()))){
 
 							LOGGER.info("Deleting connection request by acceptor");
@@ -1390,13 +1461,13 @@ public class ConnectionServiceImpl implements ConnectionService{
             XDIAddress cloud2, QueryInfo queryInfo) {
        LOGGER.info("Enter logsConnection with cloud: {} for cloud1: {}, cloud2: {}", cloud, cloud1, cloud2);
        try {
-           
+
            XDIDiscoveryResult cloudDiscovery = authenticate(cloud, cloudSecretToken);
            XDIDiscoveryResult cloud1Discovery = getXDIDiscovery(cloud1);           
-           
+
            String cloudNumber = cloudDiscovery.getCloudNumber().toString();
            String cloud1CloudNumber = cloud1Discovery.getCloudNumber().toString();
-           String cloud1Guardian = EntityUtil.getGuardianCloudNumber(cloud1CloudNumber);
+           String cloud1Guardian = EntityUtil.getGuardianCloudNumber(cloud1CloudNumber);      
            
            if(!cloudNumber.equals(cloud1CloudNumber) && !cloudNumber.equals(cloud1Guardian)){
                LOGGER.info("Invalid cloud1 provided");
@@ -1404,7 +1475,9 @@ public class ConnectionServiceImpl implements ConnectionService{
            }
            
            LOGGER.info("Getting logs for cloud1: {}, cloud2: {}", cloud1.toString(), cloud2.toString());
-           return CynjaCloudChat.logService.getChatHistory(new ConnectionImpl(cloud1, cloud2), queryInfo);
+           List<ChatMessage> chatMessageList = CynjaCloudChat.logService.getChatHistory(new ConnectionImpl(cloud1, cloud2), queryInfo);
+
+           return chatMessageList;
        
        }catch (ChatValidationException chatException) {
 
@@ -1415,6 +1488,158 @@ public class ConnectionServiceImpl implements ConnectionService{
            LOGGER.error("Error while viewing connection logs: {}", ex);
            throw new ChatSystemException(ChatErrors.SYSTEM_ERROR.getErrorCode(),ChatErrors.SYSTEM_ERROR.getErrorMessage());
        }               
-   
+    }
+
+    /* (non-Javadoc)
+     * @see biz.neustar.clouds.chat.service.ConnectionService#notifications(xdi2.core.syntax.XDIAddress, java.lang.String)
+     */
+    @Override
+    public Connection[] notifications(XDIAddress cloud, String cloudSecretToken) {
+    	 LOGGER.info("Enter notifications of cloud: {}", cloud);
+    	 List<Connection> connectionList = new ArrayList<Connection>();
+         try {
+
+             XDIDiscoveryResult cloudDiscovery = authenticate(cloud, cloudSecretToken);
+
+             String cloudNumber = cloudDiscovery.getCloudNumber().toString();
+             EntityCloudDAO entityCloudDAO = new EntityCloudHibernateDAO();
+
+             String allCloudNumbers = "";
+
+             List<String> dependentCloudNumbers =  entityCloudDAO.findDependentByGuardian(cloudNumber);
+
+             dependentCloudNumbers.add(cloudNumber);
+
+             Iterator<String> itr = dependentCloudNumbers.iterator();
+
+             while(itr.hasNext()){
+            	 allCloudNumbers+= "'"+itr.next()+"',";
+             }
+
+             allCloudNumbers = allCloudNumbers.substring(0, allCloudNumbers.length()-1);
+
+             LOGGER.info("Getting unread message notification for cloud: {}", allCloudNumbers);
+ 			 ConnectionRequestDAO connectionRequestDAO = new ConnectionRequestDAOImpl();
+
+ 			 List<Object[]> connectionRequestList = connectionRequestDAO.getNotification(allCloudNumbers);
+
+             if(connectionRequestList == null || connectionRequestList.size()==0){
+
+ 				LOGGER.info("No connection request found for cloud: {}", cloud.toString());
+ 				return new ConnectionImpl[0];
+ 			}
+
+            int size = connectionRequestList.size();
+
+ 			for (int i = 0;i < size; i++) {
+
+ 				Object obj[] = connectionRequestList.get(i);
+
+ 				XDIAddress cloud1 = null;
+ 				XDIAddress cloud2 = null;
+ 				CloudName connectionName = null;
+
+ 				String requestingCloudNumber = (String)obj[0];
+ 				String acceptingCloudNumber = (String)obj[1];
+ 				String requestingConnectionName = (String)obj[2];
+ 				String acceptingConnectionName = (String)obj[3];
+ 				String status = (String)obj[4];
+ 				String deleteRenew =  (String)obj[5];
+ 				String messageBy = (String)obj[6];
+
+ 				if (dependentCloudNumbers.contains(requestingCloudNumber) && !messageBy.equals(requestingConnectionName)
+ 						&& !messageBy.equals(requestingCloudNumber)){
+
+ 					if(deleteRenew !=null && (deleteRenew.equals(DeleteRenew.DELETED_BY_REQUESTER.getDeleteRenew()) 
+ 							|| deleteRenew.equals(DeleteRenew.RENEWED_BY_REQUESTER.getDeleteRenew()))){
+ 						LOGGER.info("Do not add unread message notification to view list if connection request is deleted by requester");
+ 						continue;
+ 					}
+
+ 					if(status.equals(Status.BLOCKED) || status.equals(Status.BLOCKED_BY_REQUESTER)){
+ 						LOGGER.info("Do not add unread message notification to view list if connection request is blocked by requester");
+ 						continue;
+ 					}
+
+ 					cloud1 = XDIAddress.create(requestingCloudNumber);
+ 					cloud2 = XDIAddress.create(acceptingCloudNumber);
+ 					connectionName = CloudName.create(acceptingConnectionName);
+ 				}
+
+ 				if (dependentCloudNumbers.contains(acceptingCloudNumber) && !messageBy.equals(acceptingConnectionName)
+ 						&& !messageBy.equals(acceptingCloudNumber)){
+
+ 					if(deleteRenew !=null && (deleteRenew.equals(DeleteRenew.DELETED_BY_ACCEPTOR.getDeleteRenew()) 
+ 							|| deleteRenew.equals(DeleteRenew.RENEWED_BY_ACCEPTOR.getDeleteRenew()))){
+ 						LOGGER.info("Do not add unread message notification to view list if connection request is deleted by requester");
+ 						continue;
+ 					}
+
+ 					if(status.equals(Status.BLOCKED) || status.equals(Status.BLOCKED_BY_REQUESTER)){
+ 						LOGGER.info("Do not add unread message notification to view list if connection request is blocked by requester");
+ 						continue;
+ 					}
+
+ 					cloud1 = XDIAddress.create(acceptingCloudNumber);
+ 					cloud2 = XDIAddress.create(requestingCloudNumber);
+ 					connectionName = CloudName.create(requestingConnectionName);
+ 				}
+
+ 				Connection connection = new ConnectionImpl(cloud1, cloud2, connectionName);
+ 				connectionList.add(connection);
+ 			}
+
+             Connection[] connections = new ConnectionImpl[connectionList.size()];
+     		 return connectionList.toArray(connections);
+
+         }catch (ChatValidationException chatException) {
+
+             LOGGER.error("Error while viewing connection logs: {}", chatException);
+             throw chatException;
+         }catch (Exception ex) {
+
+             LOGGER.error("Error while viewing connection logs: {}", ex);
+             throw new ChatSystemException(ChatErrors.SYSTEM_ERROR.getErrorCode(),ChatErrors.SYSTEM_ERROR.getErrorMessage());
+         }
+    }
+
+    /* (non-Javadoc)
+     * @see biz.neustar.clouds.chat.service.ConnectionService#updateChatStatus(xdi2.core.syntax.XDIAddress)
+     */
+    @Override
+    public void updateChatStatus(XDIAddress cloud1, List<ChatMessage> chatMessageList) {
+    	LOGGER.info("Enter updateChatStatus of cloud: {}", cloud1.toString());
+
+    	String cloudNumber1 = null;
+    	List<Integer> chatHistoryId = new ArrayList<Integer>();
+
+    	for(ChatMessage chatMessage : chatMessageList){
+
+			if(chatMessage.getStatus().equals(MessageStatus.READ.getStatus())){
+				continue;
+			}
+
+			LOGGER.info("a unread message found chat_history_id: {}", chatMessage.getChatHistoryId());
+			if(cloudNumber1 == null){
+				XDIDiscoveryResult cloud1Discovery = getXDIDiscovery(cloud1);
+				cloudNumber1 = cloud1Discovery.getCloudNumber().toString();
+
+				XDIAddress cloud2 = Utility.creteXDIAddress(chatMessage.getMessageBy());
+				XDIDiscoveryResult cloud2Discovery = getXDIDiscovery(cloud2);
+				String cloudNumber2 = cloud2Discovery.getCloudNumber().toString();
+
+				if(cloudNumber1.equals(cloudNumber2)){
+					LOGGER.info("cloud: {} is not having any unread message, so exiting");
+					break;
+				}
+			}
+			chatHistoryId.add(chatMessage.getChatHistoryId());
+    	}
+
+    	if(chatHistoryId.size() > 0){
+    		LOGGER.info("Cloud: {} is having unread messages :{}",chatHistoryId.toArray());
+    		Integer[] arrChatHistoryId = new Integer[chatHistoryId.size()];
+    		CynjaCloudChat.logService.updateMessageStatus(chatHistoryId.toArray(arrChatHistoryId));
+    	}
     }
 }

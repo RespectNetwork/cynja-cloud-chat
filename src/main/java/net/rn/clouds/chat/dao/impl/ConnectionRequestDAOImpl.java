@@ -10,7 +10,10 @@ import net.rn.clouds.chat.dao.ConnectionRequestDAO;
 import net.rn.clouds.chat.model.ConnectingClouds;
 import net.rn.clouds.chat.model.ConnectionRequest;
 import org.hibernate.Session;
+import org.hibernate.Transaction;
 import org.hibernate.criterion.Restrictions;
+
+import biz.neustar.clouds.chat.model.Connection;
 
 /**
  * @author Noopur Pandey
@@ -89,5 +92,26 @@ public class ConnectionRequestDAOImpl extends
 		session.getTransaction().commit();
 		session.close();
 		
+	}
+
+	/* (non-Javadoc)
+     * @see net.rn.clouds.chat.dao.ChatHistoryDAO#getNotification(java.lang.String)
+     */
+    @Override
+	public List<Object[]> getNotification(String cloudNumbers) {
+    	
+    	Session session = getSession();
+    	Transaction transaction = session.beginTransaction();
+    	
+    	List<Object[]> connections = session.createQuery("select cr.connectingClouds.requestingCloudNumber, cr.connectingClouds.acceptingCloudNumber, "
+    			+ "cr.requestingConnectionName, cr.acceptingConnectionName, cr.status, cr.deleteRenew,  (select distinct(ch.messageBy) from "
+    			+ "ChatMessage ch where ch.connection_id=cr.connectionId and ch.status='UNREAD' ) as messageBy from ConnectionRequest cr where "
+    			+ "(cr.connectingClouds.requestingCloudNumber in("+cloudNumbers+") and cr.connectionId in "
+    					+ "(select ch.connection_id from ChatMessage ch where ch.status='UNREAD' and ch.messageBy!=cr.requestingConnectionName )) or "
+    			+"(cr.connectingClouds.acceptingCloudNumber in("+cloudNumbers+") and cr.connectionId in "
+    					+ "(select ch.connection_id from ChatMessage ch where ch.status='UNREAD' and ch.messageBy!=cr.acceptingConnectionName))").list();
+    	transaction.commit();
+    	session.close();
+    	return connections;
 	}
 }

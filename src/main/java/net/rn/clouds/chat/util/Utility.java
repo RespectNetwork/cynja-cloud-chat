@@ -37,7 +37,8 @@ public class Utility {
         if (req.getParameter("limit") != null) {
             queryInfo.setLimit(Integer.valueOf(req.getParameter("limit")));
         }
-        queryInfo.setSortOrder(req.getParameter("offset"));
+        queryInfo.setSortOrder(req.getParameter("sortOrder"));
+        queryInfo.setStatus(req.getParameter("status"));
         return queryInfo;
     }
 
@@ -66,5 +67,14 @@ public class Utility {
 			LOGGER.error("ErrorCode: [{}] errorMessage: {}", ChatErrors.SYSTEM_ERROR, e.getMessage(), e);
 			throw new ChatSystemException(ChatErrors.SYSTEM_ERROR.getErrorCode(),ChatErrors.SYSTEM_ERROR.getErrorMessage());
 		}
+    }
+
+    /**
+     * @param connection
+     */
+    public static Integer getConnectionId(XDIAddress cloud1, XDIAddress cloud2) {
+        Integer id = cloud1.hashCode() * cloud2.hashCode();
+        LOGGER.debug("Connection id is: {}", id);
+        return Math.abs(id);
     }
 }

@@ -19,5 +19,18 @@ public interface ChatHistoryDAO {
      */
     public Integer saveMessage(ChatMessage chatMessage);
 
-    public List<ChatMessage> viewChatHistory(int connectionId, int offset, int limit, String sort);
+    /**
+     * @param connectionId
+     * @param offset
+     * @param limit
+     * @param sort
+     * @param status
+     * @return
+     */
+    public List<ChatMessage> viewChatHistory(int connectionId, int offset, int limit, String sort, String status);
+
+    /**
+     * @param chatMessage
+     */
+    public void updateMessageStatus(Integer[] chatHistoryId);
 }

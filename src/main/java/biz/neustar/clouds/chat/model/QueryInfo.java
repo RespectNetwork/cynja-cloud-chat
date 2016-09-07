@@ -11,6 +11,7 @@ public class QueryInfo {
     private int offset;
     private int limit;
     private String sortOrder;
+    private String status;
 
     /**
      * @return the offset
@@ -55,6 +56,22 @@ public class QueryInfo {
      */
     public void setSortOrder(String sortOrder) {
         this.sortOrder = sortOrder;
+    }
+
+	/**
+	 * @return status READ/UNREAD
+	 *
+	 */
+	public String getStatus() {
+		return status;
+	}
+
+	/**
+	 * @param status
+	 * 			READ/UNREAD to set
+	 */
+	public void setStatus(String status) {
+		this.status = status;
     }
 
 }

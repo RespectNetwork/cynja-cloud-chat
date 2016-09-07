@@ -7,7 +7,6 @@ import java.util.List;
 import java.util.Map;
 
 import net.rn.clouds.chat.model.ChatMessage;
-
 import biz.neustar.clouds.chat.model.Connection;
 import biz.neustar.clouds.chat.model.Log;
 import biz.neustar.clouds.chat.model.QueryInfo;
@@ -25,7 +24,7 @@ public class DefaultLogService implements LogService {
 		this.logMap = new HashMap<Integer, LinkedList<Log>> ();
 	}
 
-	public Integer addLog(WebSocketMessageHandler fromWebSocketMessageHandler, Connection connection, String line) {
+	public Integer addLog(WebSocketMessageHandler fromWebSocketMessageHandler, Connection connection, String line, boolean isOnline) {
 		int hashCode = connection.getChild1().hashCode() * connection.getChild2().hashCode();
 		LinkedList<Log> logList = this.logMap.get(Integer.valueOf(hashCode));
 
@@ -55,4 +54,13 @@ public class DefaultLogService implements LogService {
         // TODO Auto-generated method stub
         return null;
     }
+
+	/* (non-Javadoc)
+	 * @see biz.neustar.clouds.chat.service.LogService#updateMessageStatus(biz.neustar.clouds.chat.model.Connection, biz.neustar.clouds.chat.model.QueryInfo)
+	 */
+	@Override
+	public void updateMessageStatus(Integer[] chatHistoryId) {
+		// TODO Auto-generated method stub
+
+	}
 }

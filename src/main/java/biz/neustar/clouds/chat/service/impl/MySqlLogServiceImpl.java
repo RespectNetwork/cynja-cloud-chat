@@ -5,9 +5,11 @@ package biz.neustar.clouds.chat.service.impl;
 
 import java.util.List;
 
+import net.rn.clouds.chat.constants.MessageStatus;
 import net.rn.clouds.chat.dao.ChatHistoryDAO;
 import net.rn.clouds.chat.dao.impl.ChatHistoryDAOImpl;
 import net.rn.clouds.chat.model.ChatMessage;
+import net.rn.clouds.chat.util.Utility;
 
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
@@ -32,25 +34,21 @@ public class MySqlLogServiceImpl implements LogService {
     }
 
     @Override
-    public Integer addLog(WebSocketMessageHandler fromWebSocketMessageHandler, Connection connection, String message) {
+    public Integer addLog(WebSocketMessageHandler fromWebSocketMessageHandler, Connection connection, String message, boolean isOnline) {
         LOGGER.info("Add log for connection between cloud: {} and cloud: {}", connection.getChild1(),
                 connection.getChild2());
         ChatMessage chatMessage = new ChatMessage();
-        chatMessage.setConnection_id(getConnectionId(connection));
+        chatMessage.setConnection_id(Utility.getConnectionId(connection.getChild1(), connection.getChild2()));
         chatMessage.setMessageBy(connection.getChild1().toString());
         chatMessage.setMessage(message);
+        if(isOnline){
+        	chatMessage.setStatus(MessageStatus.READ.getStatus());
+        }else{
+        	chatMessage.setStatus(MessageStatus.UNREAD.getStatus());
+        }
         DateTime date = new DateTime(DateTimeZone.UTC);
         chatMessage.setCreatedTime(date.getMillis());
         return chatHistoryDAO.saveMessage(chatMessage);
-    }
-
-    /**
-     * @param connection
-     */
-    private Integer getConnectionId(Connection connection) {
-        Integer id = connection.getChild1().hashCode() * connection.getChild2().hashCode();
-        LOGGER.debug("Connection id is: {}", id);
-        return Math.abs(id);
     }
 
     @Override
@@ -62,8 +60,16 @@ public class MySqlLogServiceImpl implements LogService {
     public List<ChatMessage> getChatHistory(Connection connection, QueryInfo queryInfo) {
         LOGGER.info("Get chat logs for connection between cloud: {} and cloud: {}", connection.getChild1(),
                 connection.getChild2());
-        return chatHistoryDAO.viewChatHistory(getConnectionId(connection), queryInfo.getOffset(), queryInfo.getLimit(),
-                queryInfo.getSortOrder());
+        return chatHistoryDAO.viewChatHistory(Utility.getConnectionId(connection.getChild1(), connection.getChild2()), queryInfo.getOffset(), queryInfo.getLimit(),
+                queryInfo.getSortOrder(), queryInfo.getStatus());
     }
 
+	/* (non-Javadoc)
+	 * @see biz.neustar.clouds.chat.service.LogService#updateMessageStatus()
+	 */
+	@Override
+	public void updateMessageStatus(Integer[] chatHistoryId) {
+		LOGGER.info("Update chat status for connection_id: {}", chatHistoryId.toString());		
+		chatHistoryDAO.updateMessageStatus(chatHistoryId);
+	}
 }

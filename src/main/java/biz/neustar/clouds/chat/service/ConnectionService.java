@@ -32,4 +32,8 @@ public interface ConnectionService {
 
     public List<ChatMessage> chatHistory(XDIAddress parent, String parentSecretToken, XDIAddress child1,
             XDIAddress child2, QueryInfo queryInfo);
+
+    public Connection[] notifications(XDIAddress cloud, String cloudSecretToken);
+
+    public void updateChatStatus(XDIAddress child1, List<ChatMessage> chatMessageList);
 }

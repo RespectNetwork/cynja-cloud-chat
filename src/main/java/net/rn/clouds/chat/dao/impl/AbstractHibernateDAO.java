@@ -194,12 +194,12 @@ public class AbstractHibernateDAO<T, ID extends Serializable> extends HibernateD
                 crit.add(c);
             }
 
+            if(sortOrder != null && sortBy != null){
             if ("asc".equalsIgnoreCase(sortOrder)) {
                 crit.addOrder(Order.asc(sortBy));
-            } else if ("desc".equalsIgnoreCase(sortOrder)) {
-                crit.addOrder(Order.desc(sortBy));
             } else {
                 crit.addOrder(Order.desc(sortBy));
+            }
             }
             crit.setFirstResult(offset);
             crit.setMaxResults(limit);

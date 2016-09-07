@@ -11,6 +11,7 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import net.rn.clouds.chat.constants.ChatErrors;
 import net.rn.clouds.chat.exceptions.ChatSystemException;
 import net.rn.clouds.chat.exceptions.ChatValidationException;
 import net.rn.clouds.chat.model.ChatMessage;
@@ -56,6 +57,8 @@ public class LogsServlet extends HttpServlet{
 			}
 
 			JsonUtil.write(resp.getWriter(), jsonArray);
+			
+			CynjaCloudChat.connectionServiceImpl.updateChatStatus(cloud1, logs);
 
 		}catch(ChatValidationException ve){
 
@@ -66,6 +69,11 @@ public class LogsServlet extends HttpServlet{
 
 			LOGGER.error("ErrorCode: [{}] : ErrorMessage: {}", se.getErrorCode(), se.getErrorDescription(), se);
 			Utility.handleChatException(resp, se.getErrorCode(), se.getErrorDescription());
+
+		}catch(Exception ex){
+
+			LOGGER.error("ErrorCode: [{}] : ErrorMessage: {}",ChatErrors.SYSTEM_ERROR.getErrorCode(), ex.getMessage(), ex);
+			Utility.handleChatException(resp, ChatErrors.SYSTEM_ERROR.getErrorCode(), ChatErrors.SYSTEM_ERROR.getErrorMessage());
 		}
 	}
 }
