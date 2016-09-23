@@ -198,19 +198,21 @@ public class JsonUtil {
 				connectionImpl = (ConnectionImpl)connection;
 			}
 
-			JsonArray cloudJsonArray = notificationJsonObject.getAsJsonArray(connectionImpl.getChild1().toString());
+			if(connectionImpl != null && connectionImpl.getChild1() != null){
+				JsonArray cloudJsonArray = notificationJsonObject.getAsJsonArray(connectionImpl.getChild1().toString());
 
-			if (cloudJsonArray == null) {
+				if (cloudJsonArray == null) {
 
-				LOGGER.info("Creating JSON array of message notification for cloud: {}",connectionImpl.getChild1().toString());
-				cloudJsonArray = new JsonArray();
-				notificationJsonObject.add(connectionImpl.getChild1().toString(), cloudJsonArray);
+					LOGGER.info("Creating JSON array of message notification for cloud: {}",connectionImpl.getChild1().toString());
+					cloudJsonArray = new JsonArray();
+					notificationJsonObject.add(connectionImpl.getChild1().toString(), cloudJsonArray);
+				}
+
+				JsonObject child1JsonObject = new JsonObject();
+				child1JsonObject.add("cloud", gson.toJsonTree(connectionImpl.getChild2().toString()));			
+				child1JsonObject.add("name", gson.toJsonTree(connectionImpl.getConnectionName().toString()));
+				cloudJsonArray.add(child1JsonObject);
 			}
-
-			JsonObject child1JsonObject = new JsonObject();
-			child1JsonObject.add("cloud", gson.toJsonTree(connectionImpl.getChild2().toString()));			
-			child1JsonObject.add("name", gson.toJsonTree(connectionImpl.getConnectionName().toString()));
-			cloudJsonArray.add(child1JsonObject);
 		}
 		LOGGER.info("Exit JsonUtil.notificationToJson()");
 

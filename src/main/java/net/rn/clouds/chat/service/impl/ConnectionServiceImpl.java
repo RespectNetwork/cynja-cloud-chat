@@ -253,7 +253,7 @@ public class ConnectionServiceImpl implements ConnectionService{
 				connectionRequest.setApprovingCloudNumber(approvingCloudNumber);
 				connectionRequest.setStatus(status);
 
-				Integer connection_id = Utility.getConnectionId(cloud1, cloud2);
+				Integer connection_id = Utility.getConnectionId(cloud1Discovery.getCloudNumber().getXDIAddress(), cloud2Discovery.getCloudNumber().getXDIAddress());
 				connectionRequest.setConnectionId(connection_id);
 
 				LOGGER.info("Saving new connection request");
@@ -1339,13 +1339,13 @@ public class ConnectionServiceImpl implements ConnectionService{
 			XDIDiscoveryResult cloud1Discovery = getXDIDiscovery(cloud1);
 			XDIDiscoveryResult cloud2Discovery = getXDIDiscovery(cloud2);					
 			
-			String cloudNumber1 = cloud1Discovery.getCloudNumber().toString();
-			String cloudNumber2 = cloud2Discovery.getCloudNumber().toString();
+			XDIAddress cloudNumber1 = cloud1Discovery.getCloudNumber().getXDIAddress();
+			XDIAddress cloudNumber2 = cloud2Discovery.getCloudNumber().getXDIAddress();
 			
 			LOGGER.info("Getting connection request between cloud1: {}, cloud2: {}", cloudNumber1, cloudNumber2);
 			ConnectionRequestDAO connectionRequestDAO = new ConnectionRequestDAOImpl();
 
-			List<ConnectionRequest> connectionRequestList = connectionRequestDAO.getConnectionRequest(cloudNumber1, cloudNumber2);
+			List<ConnectionRequest> connectionRequestList = connectionRequestDAO.getConnectionRequest(cloudNumber1.toString(), cloudNumber2.toString());
 			
 			if(connectionRequestList == null || connectionRequestList.size()==0){
 				
@@ -1440,7 +1440,7 @@ public class ConnectionServiceImpl implements ConnectionService{
 				connectionName = CloudName.create(connectionRequest.getRequestingConnectionName());
 			}						
 				
-			connection = new ConnectionImpl(cloud1, cloud2, isApprovalReq, approved1, approved2, 
+			connection = new ConnectionImpl(cloudNumber1, cloudNumber2, isApprovalReq, approved1, approved2, 
 					blocked1, blocked2, connectionName, blockedBy1, blockedBy2);					
 			
 		}catch (ChatValidationException chatException) {
@@ -1463,7 +1463,8 @@ public class ConnectionServiceImpl implements ConnectionService{
        try {
 
            XDIDiscoveryResult cloudDiscovery = authenticate(cloud, cloudSecretToken);
-           XDIDiscoveryResult cloud1Discovery = getXDIDiscovery(cloud1);           
+           XDIDiscoveryResult cloud1Discovery = getXDIDiscovery(cloud1);
+           XDIDiscoveryResult cloud2Discovery = getXDIDiscovery(cloud2);
 
            String cloudNumber = cloudDiscovery.getCloudNumber().toString();
            String cloud1CloudNumber = cloud1Discovery.getCloudNumber().toString();
@@ -1475,7 +1476,8 @@ public class ConnectionServiceImpl implements ConnectionService{
            }
            
            LOGGER.info("Getting logs for cloud1: {}, cloud2: {}", cloud1.toString(), cloud2.toString());
-           List<ChatMessage> chatMessageList = CynjaCloudChat.logService.getChatHistory(new ConnectionImpl(cloud1, cloud2), queryInfo);
+           List<ChatMessage> chatMessageList = CynjaCloudChat.logService.getChatHistory(new ConnectionImpl(cloud1Discovery.getCloudNumber().getXDIAddress(), 
+        		   cloud2Discovery.getCloudNumber().getXDIAddress()), queryInfo);
 
            return chatMessageList;
        

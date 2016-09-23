@@ -148,7 +148,7 @@ public class WebSocketEndpoint extends javax.websocket.Endpoint {
 
 			// create message handler
 
-			WebSocketMessageHandler webSocketMessageHandler = new WebSocketMessageHandler(session, child1, child2, connection);
+			WebSocketMessageHandler webSocketMessageHandler = new WebSocketMessageHandler(session, connection.getChild1(), connection.getChild2(), connection);
 
 			session.addMessageHandler(webSocketMessageHandler);
 			WEBSOCKETMESSAGEHANDLERS.add(webSocketMessageHandler);
