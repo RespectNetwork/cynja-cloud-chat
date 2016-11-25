@@ -4,6 +4,8 @@
 package net.rn.clouds.chat.util;
 
 import java.io.IOException;
+import java.security.GeneralSecurityException;
+import java.security.PrivateKey;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -15,8 +17,14 @@ import net.rn.clouds.chat.exceptions.ChatValidationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import xdi2.client.exceptions.Xdi2ClientException;
+import xdi2.client.impl.http.XDIHttpClient;
+import xdi2.client.util.XDIClientUtil;
 import xdi2.core.syntax.XDIAddress;
 import xdi2.core.syntax.parser.ParserException;
+import xdi2.discovery.XDIDiscoveryClient;
+import xdi2.discovery.XDIDiscoveryResult;
+import biz.neustar.clouds.chat.InitFilter;
 import biz.neustar.clouds.chat.model.QueryInfo;
 
 import com.google.gson.JsonObject;
@@ -42,7 +50,7 @@ public class Utility {
         return queryInfo;
     }
 
-    public static XDIAddress creteXDIAddress(String cloud){
+    public static XDIAddress createXDIAddress(String cloud){
     	LOGGER.info("Enter creteXDIAddress for cloud: {}", cloud);
     	try{
 				return XDIAddress.create(cloud);
@@ -77,4 +85,49 @@ public class Utility {
         LOGGER.debug("Connection id is: {}", id);
         return Math.abs(id);
     }
+
+    public static XDIDiscoveryResult getXDIDiscovery(XDIAddress cloud){
+
+		XDIDiscoveryResult cloudDiscoveryResult = null;
+		LOGGER.info("Getting discovery of cloud: {}", cloud.toString());
+		if(cloud != null){
+			try{
+			    XDIDiscoveryClient cloudDiscovery = new XDIDiscoveryClient(((XDIHttpClient) InitFilter.XDI_DISCOVERY_CLIENT.getRegistryXdiClient()).getXdiEndpointUri());
+                cloudDiscoveryResult = cloudDiscovery.discoverFromRegistry(cloud);
+
+				if (cloudDiscoveryResult == null|| cloudDiscoveryResult.toString().equals("null (null)")){
+
+					LOGGER.error("{} not found", cloud.toString());
+					throw new ChatValidationException(ChatErrors.CLOUD_NOT_FOUND.getErrorCode(), cloud.toString()+ChatErrors.CLOUD_NOT_FOUND.getErrorMessage());
+				}
+				LOGGER.info("cloud number: {}",cloudDiscoveryResult.getCloudNumber().toString());
+			}catch(Xdi2ClientException clientExcption){
+
+				LOGGER.error("Error while discovery of cloud: {}",clientExcption);
+				throw new ChatValidationException(ChatErrors.CLOUD_NOT_FOUND.getErrorCode(), cloud.toString()+ChatErrors.CLOUD_NOT_FOUND.getErrorMessage());
+			}
+		}
+		return cloudDiscoveryResult;
+	}
+
+    public static void authenticate(XDIAddress cloud, String cloudSecretToken){
+
+		XDIDiscoveryResult cloudDiscovery = getXDIDiscovery(cloud);
+
+		LOGGER.info("Authenticating cloud: {}",cloud.toString());
+		try{
+			PrivateKey cloudPrivateKey = XDIClientUtil.retrieveSignaturePrivateKey(cloudDiscovery.getCloudNumber(), cloudDiscovery.getXdiEndpointUri(), cloudSecretToken);	
+
+			if (cloudPrivateKey == null){
+
+				LOGGER.error("{} private key not found", cloud.toString());
+				throw new ChatValidationException(ChatErrors.AUTHENTICATOION_FAILED.getErrorCode(), ChatErrors.AUTHENTICATOION_FAILED.getErrorMessage()+cloud.toString());
+			}
+		}
+		catch(Xdi2ClientException | GeneralSecurityException ex){
+
+			LOGGER.error("Error while authenticating cloud: {}", ex);
+			throw new ChatValidationException(ChatErrors.AUTHENTICATOION_FAILED.getErrorCode(), ChatErrors.AUTHENTICATOION_FAILED.getErrorMessage()+cloud.toString());			
+		}
+	}
 }

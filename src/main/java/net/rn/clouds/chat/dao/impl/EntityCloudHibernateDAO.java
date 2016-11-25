@@ -51,4 +51,21 @@ AbstractHibernateDAO<EntityCloud, Integer> implements EntityCloudDAO{
     	
     	return list;
 	}
+
+	/**
+     * Find EntityCloud by cloudNumber
+     */
+	@Override
+    public List<Object[]> findByCloud(String cloud) {
+		Session session = getSession();
+    	Transaction transaction = session.beginTransaction();
+
+		List<Object[]> list = session.createQuery("select ec.cloudNumber, cn.cloudName from CloudName cn JOIN cn.entityCloud ec "
+				+ "where cn.cloudName = '"+cloud+"' or ec.cloudNumber='"+cloud+"'").list();
+
+    	transaction.commit();
+    	session.close();
+
+    	return list;
+    }
 }

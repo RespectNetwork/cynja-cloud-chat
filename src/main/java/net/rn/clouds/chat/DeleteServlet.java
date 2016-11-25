@@ -38,9 +38,9 @@ public class DeleteServlet  extends HttpServlet{
 	protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 		
 		try{		
-			XDIAddress cloud = Utility.creteXDIAddress(req.getParameter("cloud"));
-			XDIAddress cloud1 = Utility.creteXDIAddress(req.getParameter("cloud1"));
-			XDIAddress cloud2 = Utility.creteXDIAddress(req.getParameter("cloud2"));
+			XDIAddress cloud = Utility.createXDIAddress(req.getParameter("cloud"));
+			XDIAddress cloud1 = Utility.createXDIAddress(req.getParameter("cloud1"));
+			XDIAddress cloud2 = Utility.createXDIAddress(req.getParameter("cloud2"));
 
 			String cloudSecretToken = req.getParameter("cloudSecretToken");
 

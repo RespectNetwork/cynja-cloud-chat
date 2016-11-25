@@ -3,14 +3,20 @@
  */
 package net.rn.clouds.chat.service.impl;
 
-import java.security.GeneralSecurityException;
-import java.security.PrivateKey;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import biz.neustar.clouds.chat.CynjaCloudChat;
+import biz.neustar.clouds.chat.model.Connection;
+import biz.neustar.clouds.chat.model.Log;
+import biz.neustar.clouds.chat.model.QueryInfo;
+import biz.neustar.clouds.chat.service.ConnectionService;
 import net.rn.clouds.chat.constants.ChatErrors;
 import net.rn.clouds.chat.constants.DeleteRenew;
 import net.rn.clouds.chat.constants.MessageStatus;
@@ -29,23 +35,8 @@ import net.rn.clouds.chat.model.ConnectionProfile;
 import net.rn.clouds.chat.model.ConnectionRequest;
 import net.rn.clouds.chat.util.EntityUtil;
 import net.rn.clouds.chat.util.Utility;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import xdi2.client.exceptions.Xdi2ClientException;
-import xdi2.client.impl.http.XDIHttpClient;
-import xdi2.client.util.XDIClientUtil;
 import xdi2.core.syntax.CloudName;
 import xdi2.core.syntax.XDIAddress;
-import xdi2.discovery.XDIDiscoveryClient;
-import xdi2.discovery.XDIDiscoveryResult;
-import biz.neustar.clouds.chat.CynjaCloudChat;
-import biz.neustar.clouds.chat.InitFilter;
-import biz.neustar.clouds.chat.model.Connection;
-import biz.neustar.clouds.chat.model.Log;
-import biz.neustar.clouds.chat.model.QueryInfo;
-import biz.neustar.clouds.chat.service.ConnectionService;
 /**
  * @author Noopur Pandey
  *
@@ -54,52 +45,7 @@ public class ConnectionServiceImpl implements ConnectionService{
 	
 	private static final Logger LOGGER = LoggerFactory.getLogger(ConnectionServiceImpl.class);
 	
-	private XDIDiscoveryResult getXDIDiscovery(XDIAddress cloud){
-		
-		XDIDiscoveryResult cloudDiscoveryResult = null;
-		LOGGER.info("Getting discovery of cloud: {}", cloud.toString());
-		if(cloud != null){
-			try{
-			    XDIDiscoveryClient cloudDiscovery = new XDIDiscoveryClient(((XDIHttpClient) InitFilter.XDI_DISCOVERY_CLIENT.getRegistryXdiClient()).getXdiEndpointUri());
-                cloudDiscoveryResult = cloudDiscovery.discoverFromRegistry(cloud);
-
-				if (cloudDiscoveryResult == null|| cloudDiscoveryResult.toString().equals("null (null)")){
-
-					LOGGER.error("{} not found", cloud.toString());
-					throw new ChatValidationException(ChatErrors.CLOUD_NOT_FOUND.getErrorCode(), cloud.toString()+ChatErrors.CLOUD_NOT_FOUND.getErrorMessage());
-				}
-				LOGGER.info("cloud number: {}",cloudDiscoveryResult.getCloudNumber().toString());
-			}catch(Xdi2ClientException clientExcption){
-				
-				LOGGER.error("Error while discovery of cloud: {}",clientExcption);
-				throw new ChatValidationException(ChatErrors.CLOUD_NOT_FOUND.getErrorCode(), cloud.toString()+ChatErrors.CLOUD_NOT_FOUND.getErrorMessage());
-			}
-		}
-		return cloudDiscoveryResult;		
-	}
 	
-	private XDIDiscoveryResult authenticate(XDIAddress cloud, String cloudSecretToken){
-		
-		XDIDiscoveryResult cloudDiscovery = getXDIDiscovery(cloud);
-		
-		LOGGER.info("Authenticating cloud: {}",cloud.toString());
-		try{
-			PrivateKey cloudPrivateKey = XDIClientUtil.retrieveSignaturePrivateKey(cloudDiscovery.getCloudNumber(), cloudDiscovery.getXdiEndpointUri(), cloudSecretToken);	
-
-			if (cloudPrivateKey == null){
-
-				LOGGER.error("{} private key not found", cloud.toString());
-				throw new ChatValidationException(ChatErrors.AUTHENTICATOION_FAILED.getErrorCode(), ChatErrors.AUTHENTICATOION_FAILED.getErrorMessage()+cloud.toString());
-			}
-		}
-		catch(Xdi2ClientException | GeneralSecurityException ex){
-			
-			LOGGER.error("Error while authenticating cloud: {}", ex);
-			throw new ChatValidationException(ChatErrors.AUTHENTICATOION_FAILED.getErrorCode(), ChatErrors.AUTHENTICATOION_FAILED.getErrorMessage()+cloud.toString());			
-		}
-				
-		return cloudDiscovery;
-	}
 
 	/* (non-Javadoc)
 	 * @see biz.neustar.clouds.chat.service.ConnectionService#requestConnection(xdi2.core.syntax.XDIAddress, java.lang.String, xdi2.core.syntax.XDIAddress)
@@ -114,13 +60,32 @@ public class ConnectionServiceImpl implements ConnectionService{
 				LOGGER.info("Invalid connection requested between {} and {}",cloud1.toString(), cloud2.toString());
 				throw new ChatValidationException(ChatErrors.INVALID_CONNECTION_REQUEST.getErrorCode(), ChatErrors.INVALID_CONNECTION_REQUEST.getErrorMessage());
 			}
-						  
-			XDIDiscoveryResult cloud1Discovery = authenticate(cloud1, cloud1SecretToken);
-			XDIDiscoveryResult cloud2Discovery = getXDIDiscovery(cloud2);
-						
-			String cloud1Number = cloud1Discovery.getCloudNumber().toString();			
-			String cloud2Number = cloud2Discovery.getCloudNumber().toString();		
-		
+			Utility.authenticate(cloud1, cloud1SecretToken);
+			EntityCloudDAO entityDAO = new EntityCloudHibernateDAO();
+			List<Object[]> cloudList1 = entityDAO.findByCloud(cloud1.toString());
+			List<Object[]> cloudList2 = entityDAO.findByCloud(cloud2.toString());
+
+			String cloud1Number = null;
+			String cloud2Number = null;
+			String cloud1Name = null;
+			String cloud2Name = null;
+
+			if(cloudList1 != null && cloudList1.size() > 0){
+				Object[] obj = cloudList1.get(0);
+				if(obj != null && obj.length > 0){
+					cloud1Number = (String)obj[0];
+					cloud1Name = (String)obj[1];
+				}
+			}
+
+			if(cloudList2 != null && cloudList2.size() > 0){
+				Object[] obj = cloudList2.get(0);
+				if(obj != null && obj.length > 0){
+					cloud2Number = (String)obj[0];
+					cloud2Name = (String)obj[1];
+				}
+			}
+
 			LOGGER.info("Checking if connection already requested");
 			ConnectionRequestDAO connectionRequestDAO = new ConnectionRequestDAOImpl();
 			List<ConnectionRequest> connectionRequestList = connectionRequestDAO.getConnectionRequest(cloud1Number, cloud2Number);
@@ -248,12 +213,12 @@ public class ConnectionServiceImpl implements ConnectionService{
 				ConnectionRequest connectionRequest = new ConnectionRequest();
 
 				connectionRequest.setConnectingClouds(connectingClouds);
-				connectionRequest.setRequestingConnectionName(cloud1.toString());
-				connectionRequest.setAcceptingConnectionName(cloud2.toString());
+				connectionRequest.setRequestingConnectionName(cloud1Name);
+				connectionRequest.setAcceptingConnectionName(cloud2Name);
 				connectionRequest.setApprovingCloudNumber(approvingCloudNumber);
 				connectionRequest.setStatus(status);
 
-				Integer connection_id = Utility.getConnectionId(cloud1Discovery.getCloudNumber().getXDIAddress(), cloud2Discovery.getCloudNumber().getXDIAddress());
+				Integer connection_id = Utility.getConnectionId(Utility.createXDIAddress(cloud1Number), Utility.createXDIAddress(cloud2Number));
 				connectionRequest.setConnectionId(connection_id);
 
 				LOGGER.info("Saving new connection request");
@@ -280,13 +245,36 @@ public class ConnectionServiceImpl implements ConnectionService{
 
 		LOGGER.info("Enter approveConnection with approverCloud: {}, cloud1: {}, cloud2: {}", cloud, cloud1, cloud2);
 		try {
-			XDIDiscoveryResult approverDiscovery = authenticate(cloud, cloudSecretToken);			
-			XDIDiscoveryResult cloud1Discovery = getXDIDiscovery(cloud1);			
-			XDIDiscoveryResult cloud2Discovery = getXDIDiscovery(cloud2);			
+			Utility.authenticate(cloud, cloudSecretToken);
+			EntityCloudDAO entityDAO = new EntityCloudHibernateDAO();
+			List<Object[]> cloudList = entityDAO.findByCloud(cloud.toString());
+			List<Object[]> cloudList1 = entityDAO.findByCloud(cloud1.toString());
+			List<Object[]> cloudList2 = entityDAO.findByCloud(cloud2.toString());
 
-			String cloudNumber = approverDiscovery.getCloudNumber().toString();
-			String cloud1CloudNumber = cloud1Discovery.getCloudNumber().toString();
-			String cloud2CloudNumber = cloud2Discovery.getCloudNumber().toString();
+			String cloudNumber = null;
+			String cloud1CloudNumber = null;
+			String cloud2CloudNumber = null;
+
+			if(cloudList != null && cloudList.size() > 0){
+				Object[] obj = cloudList.get(0);
+				if(obj != null && obj.length > 0){
+					cloudNumber = (String)obj[0];
+				}
+			}
+
+			if(cloudList1 != null && cloudList1.size() > 0){
+				Object[] obj = cloudList1.get(0);
+				if(obj != null && obj.length > 0){
+					cloud1CloudNumber = (String)obj[0];
+				}
+			}
+
+			if(cloudList2 != null && cloudList2.size() > 0){
+				Object[] obj = cloudList2.get(0);
+				if(obj != null && obj.length > 0){
+					cloud2CloudNumber = (String)obj[0];
+				}
+			}
 
 			String guardianCloudNumber = EntityUtil.getGuardianCloudNumber(cloud1CloudNumber);
 
@@ -492,25 +480,33 @@ public class ConnectionServiceImpl implements ConnectionService{
 		LOGGER.info("Enter viewConnectionsAsParent with parent: {} ", parent);
 		List<Connection> connectionList = new ArrayList<Connection>();
 		try {
-			
-			XDIDiscoveryResult parentDiscovery = authenticate(parent, parentSecretToken);
+			Utility.authenticate(parent, parentSecretToken);
+			EntityCloudDAO entityDAO = new EntityCloudHibernateDAO();
+			List<Object[]> cloudList = entityDAO.findByCloud(parent.toString());
 
-			LOGGER.info("Getting all children of parent cloud: {}",parent.toString());
-			XDIAddress[] children = CynjaCloudChat.parentChildService.getChildren(parent, parentSecretToken);			
+			String cloudNumber = null;
+
+			if(cloudList != null && cloudList.size() > 0){
+				Object[] obj = cloudList.get(0);
+				if(obj != null && obj.length > 0){
+					cloudNumber = (String)obj[0];
+				}
+			}
+
+			LOGGER.info("Getting all children of parent cloud: {}",parent.toString());			
+			List<String> children = entityDAO.findDependentByGuardian(cloudNumber);
 			List<String> collection = new ArrayList<String>();
 			String collection_str = "";
-			for (XDIAddress child : children) {
+			for (String child : children) {
 				
-				LOGGER.info("Getting discovery of child cloud: {}", child.toString());
-				XDIDiscoveryResult childDiscovery = getXDIDiscovery(child);
-				
-				LOGGER.info("Adding child: {} to list", childDiscovery.getCloudNumber().toString());
-				collection.add(childDiscovery.getCloudNumber().toString());
+				LOGGER.info("Getting child cloudNumber", child);				
+				LOGGER.info("Adding child: {} to list", child);
+				collection.add(child);
 				
 				if(!collection_str.equals("")){
 					collection_str+=",";
 				}
-				collection_str+="'"+childDiscovery.getCloudNumber().toString()+"'";
+				collection_str+="'"+child+"'";
 			}
 			
 			LOGGER.info("Getting connection requests of children of parent cloud:{} ",parent.toString());
@@ -554,7 +550,7 @@ public class ConnectionServiceImpl implements ConnectionService{
 						}
 
 						if(connectionRequest.getApprovingCloudNumber() != null && 
-								connectionRequest.getApprovingCloudNumber().equals(parentDiscovery.getCloudNumber().toString())){
+								connectionRequest.getApprovingCloudNumber().equals(cloudNumber)){
 
 							isApprovalRequired = true;
 						}
@@ -562,8 +558,8 @@ public class ConnectionServiceImpl implements ConnectionService{
 						if(deleteRenew != null && deleteRenew.equals(DeleteRenew.RENEWED_BY_REQUESTER.getDeleteRenew())){
 							isApprovalRequired = true;
 						}
-						child1 = XDIAddress.create(connectionRequest.getConnectingClouds().getRequestingCloudNumber());
-						child2 = XDIAddress.create(connectionRequest.getConnectingClouds().getAcceptingCloudNumber());												
+						child1 = Utility.createXDIAddress(connectionRequest.getConnectingClouds().getRequestingCloudNumber());
+						child2 = Utility.createXDIAddress(connectionRequest.getConnectingClouds().getAcceptingCloudNumber());												
 						connectionName = CloudName.create(connectionRequest.getAcceptingConnectionName());
 						
 						LOGGER.info("Checking ig connection is blocked by requester");
@@ -618,7 +614,7 @@ public class ConnectionServiceImpl implements ConnectionService{
 						}
 
 						if(connectionRequest.getApprovingCloudNumber() != null && 
-								connectionRequest.getApprovingCloudNumber().equals(parentDiscovery.getCloudNumber().toString())){
+								connectionRequest.getApprovingCloudNumber().equals(cloudNumber)){
 
 							isApprovalRequired = true;
 						}
@@ -637,8 +633,8 @@ public class ConnectionServiceImpl implements ConnectionService{
 							isApprovalRequired = true;
 						}
 						
-						child1 = XDIAddress.create(connectionRequest.getConnectingClouds().getAcceptingCloudNumber());
-						child2 = XDIAddress.create(connectionRequest.getConnectingClouds().getRequestingCloudNumber());
+						child1 = Utility.createXDIAddress(connectionRequest.getConnectingClouds().getAcceptingCloudNumber());
+						child2 = Utility.createXDIAddress(connectionRequest.getConnectingClouds().getRequestingCloudNumber());
 						connectionName = CloudName.create(connectionRequest.getRequestingConnectionName());
 						
 						LOGGER.info("Checking if connection is blocked by acceptor");
@@ -725,10 +721,17 @@ public class ConnectionServiceImpl implements ConnectionService{
 		List<Connection> connectionList = new ArrayList<Connection>();				
 
 		try {
+			Utility.authenticate(cloud, cloudSecretToken);
+			EntityCloudDAO entityDAO = new EntityCloudHibernateDAO();
+			List<Object[]> cloudList = entityDAO.findByCloud(cloud.toString());
+			String cloudNumber = null;			
 			
-			XDIDiscoveryResult cloudDiscovery = authenticate(cloud, cloudSecretToken);
-			
-			String cloudNumber = cloudDiscovery.getCloudNumber().toString();						
+			if(cloudList != null && cloudList.size() > 0){
+				Object[] obj = cloudList.get(0);
+				if(obj != null && obj.length > 0){
+					cloudNumber = (String)obj[0];					
+				}
+			}			
 			
 			List<String> collection = new ArrayList<String>();
 			collection.add(cloudNumber);
@@ -768,8 +771,8 @@ public class ConnectionServiceImpl implements ConnectionService{
 							continue;
 						}
 						
-						cloud1 = XDIAddress.create(connectionRequest.getConnectingClouds().getRequestingCloudNumber());
-						cloud2 = XDIAddress.create(connectionRequest.getConnectingClouds().getAcceptingCloudNumber());						
+						cloud1 = Utility.createXDIAddress(connectionRequest.getConnectingClouds().getRequestingCloudNumber());
+						cloud2 = Utility.createXDIAddress(connectionRequest.getConnectingClouds().getAcceptingCloudNumber());						
 						connectionName = CloudName.create(connectionRequest.getAcceptingConnectionName());
 						
 						LOGGER.info("Checking if connection request has been blocked by cloud: {}",cloud.toString());
@@ -808,8 +811,8 @@ public class ConnectionServiceImpl implements ConnectionService{
 							LOGGER.info("Do not add connection request to view list if connection request has not been approved by requester's guardian");
 							continue;
 						}
-						cloud1 = XDIAddress.create(connectionRequest.getConnectingClouds().getAcceptingCloudNumber());
-						cloud2 = XDIAddress.create(connectionRequest.getConnectingClouds().getRequestingCloudNumber());
+						cloud1 = Utility.createXDIAddress(connectionRequest.getConnectingClouds().getAcceptingCloudNumber());
+						cloud2 = Utility.createXDIAddress(connectionRequest.getConnectingClouds().getRequestingCloudNumber());
 						connectionName = CloudName.create(connectionRequest.getRequestingConnectionName());
 						
 						LOGGER.info("Checking if connection request has been blocked by cloud: {}",cloud.toString());
@@ -906,12 +909,29 @@ public class ConnectionServiceImpl implements ConnectionService{
 
 		LOGGER.info("Enter logsConnection with cloud: {} for cloud1: {}, cloud2: {}", cloud, cloud1, cloud2);
 		try {
+			Utility.authenticate(cloud, cloudSecretToken);
+			EntityCloudDAO entityDAO = new EntityCloudHibernateDAO();
+			List<Object[]> cloudList = entityDAO.findByCloud(cloud.toString());
+			List<Object[]> cloudList1 = entityDAO.findByCloud(cloud1.toString());
 			
-			XDIDiscoveryResult cloudDiscovery = authenticate(cloud, cloudSecretToken);
-			XDIDiscoveryResult cloud1Discovery = getXDIDiscovery(cloud1);
+			String cloudNumber = null;
+			String cloud1CloudNumber = null;			
+
+			if(cloudList != null && cloudList.size() > 0){
+				Object[] obj = cloudList.get(0);
+				if(obj != null && obj.length > 0){
+					cloudNumber = (String)obj[0];				
+				}
+			}
+
+			if(cloudList1 != null && cloudList1.size() > 0){
+				Object[] obj = cloudList1.get(0);
+				if(obj != null && obj.length > 0){
+					cloud1CloudNumber = (String)obj[0];					
+				}
+			}
 			
-			String cloudNumber = cloudDiscovery.getCloudNumber().toString();
-			String cloud1CloudNumber = cloud1Discovery.getCloudNumber().toString();
+			
 			String cloud1Guardian = EntityUtil.getGuardianCloudNumber(cloud1CloudNumber);
 
 			if(!cloudNumber.equals(cloud1CloudNumber) && !cloudNumber.equals(cloud1Guardian)){
@@ -940,13 +960,36 @@ public class ConnectionServiceImpl implements ConnectionService{
 		
 		LOGGER.info("Enter blockConnection with cloud: {}, cloud1: {}, cloud2: {}", cloud, cloud1, cloud2);
 		try {
-			XDIDiscoveryResult cloudDiscovery = authenticate(cloud, cloudSecretToken);
-			XDIDiscoveryResult cloud1Discovery = getXDIDiscovery(cloud1);
-			XDIDiscoveryResult cloud2Discovery = getXDIDiscovery(cloud2);
+			Utility.authenticate(cloud, cloudSecretToken);
+			EntityCloudDAO entityDAO = new EntityCloudHibernateDAO();
+			List<Object[]> cloudList = entityDAO.findByCloud(cloud.toString());
+			List<Object[]> cloudList1 = entityDAO.findByCloud(cloud1.toString());
+			List<Object[]> cloudList2 = entityDAO.findByCloud(cloud2.toString());
 			
-			String cloudNumber = cloudDiscovery.getCloudNumber().toString();
-			String cloud1CloudNumber = cloud1Discovery.getCloudNumber().toString();
-			String cloud2CloudNumber = cloud2Discovery.getCloudNumber().toString();
+			String cloudNumber = null;
+			String cloud1CloudNumber = null;
+			String cloud2CloudNumber = null;
+			
+			if(cloudList != null && cloudList.size() > 0){
+				Object[] obj = cloudList.get(0);
+				if(obj != null && obj.length > 0){
+					cloudNumber = (String)obj[0];					
+				}
+			}
+			
+			if(cloudList1 != null && cloudList1.size() > 0){
+				Object[] obj = cloudList1.get(0);
+				if(obj != null && obj.length > 0){
+					cloud1CloudNumber = (String)obj[0];					
+				}
+			}
+			
+			if(cloudList2 != null && cloudList2.size() > 0){
+				Object[] obj = cloudList2.get(0);
+				if(obj != null && obj.length > 0){
+					cloud2CloudNumber = (String)obj[0];					
+				}
+			}
 			String guardianCloudNumber = EntityUtil.getGuardianCloudNumber(cloud1CloudNumber);
 			
 			LOGGER.info("Checking if cloud1: {} is a self or dependent cloud of cloud: {}",cloud1.toString(), cloud.toString());
@@ -1074,13 +1117,36 @@ public class ConnectionServiceImpl implements ConnectionService{
 		LOGGER.info("Enter unblockConnection with cloud: {}, cloud1: {}, cloud2: {}", cloud, cloud1, cloud2);
 		try {			
 			
-			XDIDiscoveryResult cloudDiscovery = authenticate(cloud, cloudSecretToken);
-			XDIDiscoveryResult cloud1Discovery = getXDIDiscovery(cloud1);
-			XDIDiscoveryResult cloud2Discovery = getXDIDiscovery(cloud2);
+			Utility.authenticate(cloud, cloudSecretToken);
+			EntityCloudDAO entityDAO = new EntityCloudHibernateDAO();
+			List<Object[]> cloudList = entityDAO.findByCloud(cloud.toString());
+			List<Object[]> cloudList1 = entityDAO.findByCloud(cloud1.toString());
+			List<Object[]> cloudList2 = entityDAO.findByCloud(cloud2.toString());
 			
-			String cloudNumber = cloudDiscovery.getCloudNumber().toString();
-			String cloud1CloudNumber = cloud1Discovery.getCloudNumber().toString();
-			String cloud2CloudNumber = cloud2Discovery.getCloudNumber().toString();
+			String cloudNumber = null;
+			String cloud1CloudNumber = null;
+			String cloud2CloudNumber = null;
+			
+			if(cloudList != null && cloudList.size() > 0){
+				Object[] obj = cloudList.get(0);
+				if(obj != null && obj.length > 0){
+					cloudNumber = (String)obj[0];					
+				}
+			}
+			
+			if(cloudList1 != null && cloudList1.size() > 0){
+				Object[] obj = cloudList1.get(0);
+				if(obj != null && obj.length > 0){
+					cloud1CloudNumber = (String)obj[0];					
+				}
+			}
+			
+			if(cloudList2 != null && cloudList2.size() > 0){
+				Object[] obj = cloudList2.get(0);
+				if(obj != null && obj.length > 0){
+					cloud2CloudNumber = (String)obj[0];					
+				}
+			}
 			
 			String guardianCloudNumber = EntityUtil.getGuardianCloudNumber(cloudNumber);
 			String guardian1CloudNumber = EntityUtil.getGuardianCloudNumber(cloud1CloudNumber);
@@ -1193,13 +1259,36 @@ public class ConnectionServiceImpl implements ConnectionService{
 		
 		LOGGER.info("Enter deleteConnection with cloud: {}, cloud1: {}, cloud2: {}", cloud, cloud1, cloud2);
 		try {
-			XDIDiscoveryResult cloudDiscovery = authenticate(cloud, cloudSecretToken);
-			XDIDiscoveryResult cloud1Discovery = getXDIDiscovery(cloud1);
-			XDIDiscoveryResult cloud2Discovery = getXDIDiscovery(cloud2);
+			Utility.authenticate(cloud, cloudSecretToken);
+			EntityCloudDAO entityDAO = new EntityCloudHibernateDAO();
+			List<Object[]> cloudList = entityDAO.findByCloud(cloud.toString());
+			List<Object[]> cloudList1 = entityDAO.findByCloud(cloud1.toString());
+			List<Object[]> cloudList2 = entityDAO.findByCloud(cloud2.toString());
 			
-			String cloudNumber = cloudDiscovery.getCloudNumber().toString();
-			String cloud1CloudNumber = cloud1Discovery.getCloudNumber().toString();
-			String cloud2CloudNumber = cloud2Discovery.getCloudNumber().toString();
+			String cloudNumber = null;
+			String cloud1CloudNumber = null;
+			String cloud2CloudNumber = null;
+			
+			if(cloudList != null && cloudList.size() > 0){
+				Object[] obj = cloudList.get(0);
+				if(obj != null && obj.length > 0){
+					cloudNumber = (String)obj[0];					
+				}
+			}
+			
+			if(cloudList1 != null && cloudList1.size() > 0){
+				Object[] obj = cloudList1.get(0);
+				if(obj != null && obj.length > 0){
+					cloud1CloudNumber = (String)obj[0];					
+				}
+			}
+			
+			if(cloudList2 != null && cloudList2.size() > 0){
+				Object[] obj = cloudList2.get(0);
+				if(obj != null && obj.length > 0){
+					cloud2CloudNumber = (String)obj[0];					
+				}
+			}
 			String guardianCloudNumber = EntityUtil.getGuardianCloudNumber(cloud1CloudNumber);
 			LOGGER.info("Checking if cloud1: {} is a self or dependent cloud of cloud: {}",cloud1.toString(), cloud.toString());
 			if(!cloudNumber.equals(cloud1CloudNumber) && !cloudNumber.equals(guardianCloudNumber)){
@@ -1335,12 +1424,27 @@ public class ConnectionServiceImpl implements ConnectionService{
 		LOGGER.info("Enter findConnection with requestingCloud: {}, acceptingCloud: {}", cloud1, cloud2);
 		Connection connection = null;
 		try {
-						  
-			XDIDiscoveryResult cloud1Discovery = getXDIDiscovery(cloud1);
-			XDIDiscoveryResult cloud2Discovery = getXDIDiscovery(cloud2);					
+			Utility.authenticate(cloud1, cloud1SecretToken);			  
+			EntityCloudDAO entityDAO = new EntityCloudHibernateDAO();			
+			List<Object[]> cloudList1 = entityDAO.findByCloud(cloud1.toString());
+			List<Object[]> cloudList2 = entityDAO.findByCloud(cloud2.toString());
 			
-			XDIAddress cloudNumber1 = cloud1Discovery.getCloudNumber().getXDIAddress();
-			XDIAddress cloudNumber2 = cloud2Discovery.getCloudNumber().getXDIAddress();
+			String cloudNumber1 = null;
+			String cloudNumber2 = null;
+			
+			if(cloudList1 != null && cloudList1.size() > 0){
+				Object[] obj = cloudList1.get(0);
+				if(obj != null && obj.length > 0){
+					cloudNumber1 = (String)obj[0];					
+				}
+			}
+			
+			if(cloudList2 != null && cloudList2.size() > 0){
+				Object[] obj = cloudList2.get(0);
+				if(obj != null && obj.length > 0){
+					cloudNumber2 = (String)obj[0];					
+				}
+			}
 			
 			LOGGER.info("Getting connection request between cloud1: {}, cloud2: {}", cloudNumber1, cloudNumber2);
 			ConnectionRequestDAO connectionRequestDAO = new ConnectionRequestDAOImpl();
@@ -1440,7 +1544,7 @@ public class ConnectionServiceImpl implements ConnectionService{
 				connectionName = CloudName.create(connectionRequest.getRequestingConnectionName());
 			}						
 				
-			connection = new ConnectionImpl(cloudNumber1, cloudNumber2, isApprovalReq, approved1, approved2, 
+			connection = new ConnectionImpl(Utility.createXDIAddress(cloudNumber1), Utility.createXDIAddress(cloudNumber2), isApprovalReq, approved1, approved2, 
 					blocked1, blocked2, connectionName, blockedBy1, blockedBy2);					
 			
 		}catch (ChatValidationException chatException) {
@@ -1462,12 +1566,36 @@ public class ConnectionServiceImpl implements ConnectionService{
        LOGGER.info("Enter logsConnection with cloud: {} for cloud1: {}, cloud2: {}", cloud, cloud1, cloud2);
        try {
 
-           XDIDiscoveryResult cloudDiscovery = authenticate(cloud, cloudSecretToken);
-           XDIDiscoveryResult cloud1Discovery = getXDIDiscovery(cloud1);
-           XDIDiscoveryResult cloud2Discovery = getXDIDiscovery(cloud2);
-
-           String cloudNumber = cloudDiscovery.getCloudNumber().toString();
-           String cloud1CloudNumber = cloud1Discovery.getCloudNumber().toString();
+            Utility.authenticate(cloud, cloudSecretToken);
+    	    EntityCloudDAO entityDAO = new EntityCloudHibernateDAO();
+			List<Object[]> cloudList = entityDAO.findByCloud(cloud.toString());
+			List<Object[]> cloudList1 = entityDAO.findByCloud(cloud1.toString());
+			List<Object[]> cloudList2 = entityDAO.findByCloud(cloud2.toString());
+			
+			String cloudNumber = null;
+			String cloud1CloudNumber = null;
+			String cloud2CloudNumber = null;
+			
+			if(cloudList != null && cloudList.size() > 0){
+				Object[] obj = cloudList.get(0);
+				if(obj != null && obj.length > 0){
+					cloudNumber = (String)obj[0];					
+				}
+			}
+			
+			if(cloudList1 != null && cloudList1.size() > 0){
+				Object[] obj = cloudList1.get(0);
+				if(obj != null && obj.length > 0){
+					cloud1CloudNumber = (String)obj[0];					
+				}
+			}
+			
+			if(cloudList2 != null && cloudList2.size() > 0){
+				Object[] obj = cloudList2.get(0);
+				if(obj != null && obj.length > 0){
+					cloud2CloudNumber = (String)obj[0];					
+				}
+			}
            String cloud1Guardian = EntityUtil.getGuardianCloudNumber(cloud1CloudNumber);      
            
            if(!cloudNumber.equals(cloud1CloudNumber) && !cloudNumber.equals(cloud1Guardian)){
@@ -1476,8 +1604,8 @@ public class ConnectionServiceImpl implements ConnectionService{
            }
            
            LOGGER.info("Getting logs for cloud1: {}, cloud2: {}", cloud1.toString(), cloud2.toString());
-           List<ChatMessage> chatMessageList = CynjaCloudChat.logService.getChatHistory(new ConnectionImpl(cloud1Discovery.getCloudNumber().getXDIAddress(), 
-        		   cloud2Discovery.getCloudNumber().getXDIAddress()), queryInfo);
+           List<ChatMessage> chatMessageList = CynjaCloudChat.logService.getChatHistory(new ConnectionImpl(Utility.createXDIAddress(cloud1CloudNumber), 
+        		   Utility.createXDIAddress(cloud2CloudNumber)), queryInfo);
 
            return chatMessageList;
        
@@ -1501,14 +1629,22 @@ public class ConnectionServiceImpl implements ConnectionService{
     	 List<Connection> connectionList = new ArrayList<Connection>();
          try {
 
-             XDIDiscoveryResult cloudDiscovery = authenticate(cloud, cloudSecretToken);
-
-             String cloudNumber = cloudDiscovery.getCloudNumber().toString();
-             EntityCloudDAO entityCloudDAO = new EntityCloudHibernateDAO();
-
+             Utility.authenticate(cloud, cloudSecretToken);
+             
+             EntityCloudDAO entityDAO = new EntityCloudHibernateDAO();             
+ 			 List<Object[]> cloudList = entityDAO.findByCloud(cloud.toString());
+ 			 String cloudNumber = null;			 
+			
+			 if(cloudList != null && cloudList.size() > 0){
+				Object[] obj = cloudList.get(0);
+				if(obj != null && obj.length > 0){
+					cloudNumber = (String)obj[0];					
+				}
+			 }
+             
              String allCloudNumbers = "";
 
-             List<String> dependentCloudNumbers =  entityCloudDAO.findDependentByGuardian(cloudNumber);
+             List<String> dependentCloudNumbers =  entityDAO.findDependentByGuardian(cloudNumber);
 
              dependentCloudNumbers.add(cloudNumber);
 
@@ -1563,8 +1699,8 @@ public class ConnectionServiceImpl implements ConnectionService{
  						continue;
  					}
 
- 					cloud1 = XDIAddress.create(requestingCloudNumber);
- 					cloud2 = XDIAddress.create(acceptingCloudNumber);
+ 					cloud1 = Utility.createXDIAddress(requestingCloudNumber);
+ 					cloud2 = Utility.createXDIAddress(acceptingCloudNumber);
  					connectionName = CloudName.create(acceptingConnectionName);
  				}
 
@@ -1582,8 +1718,8 @@ public class ConnectionServiceImpl implements ConnectionService{
  						continue;
  					}
 
- 					cloud1 = XDIAddress.create(acceptingCloudNumber);
- 					cloud2 = XDIAddress.create(requestingCloudNumber);
+ 					cloud1 = Utility.createXDIAddress(acceptingCloudNumber);
+ 					cloud2 = Utility.createXDIAddress(requestingCloudNumber);
  					connectionName = CloudName.create(requestingConnectionName);
  				}
 
@@ -1623,12 +1759,27 @@ public class ConnectionServiceImpl implements ConnectionService{
 
 			LOGGER.info("a unread message found chat_history_id: {}", chatMessage.getChatHistoryId());
 			if(cloudNumber1 == null){
-				XDIDiscoveryResult cloud1Discovery = getXDIDiscovery(cloud1);
-				cloudNumber1 = cloud1Discovery.getCloudNumber().toString();
+				EntityCloudDAO entityDAO = new EntityCloudHibernateDAO();             
+	 			List<Object[]> cloudList1 = entityDAO.findByCloud(cloud1.toString());	 						
+				
+				if(cloudList1 != null && cloudList1.size() > 0){
+					Object[] obj = cloudList1.get(0);
+					if(obj != null && obj.length > 0){
+						cloudNumber1 = (String)obj[0];					
+					}
+				}
 
-				XDIAddress cloud2 = Utility.creteXDIAddress(chatMessage.getMessageBy());
-				XDIDiscoveryResult cloud2Discovery = getXDIDiscovery(cloud2);
-				String cloudNumber2 = cloud2Discovery.getCloudNumber().toString();
+				XDIAddress cloud2 = Utility.createXDIAddress(chatMessage.getMessageBy());
+				String cloudNumber2 = null;
+				
+				List<Object[]> cloudList2 = entityDAO.findByCloud(cloud2.toString());	 						
+				
+				if(cloudList2 != null && cloudList2.size() > 0){
+					Object[] obj = cloudList2.get(0);
+					if(obj != null && obj.length > 0){
+						cloudNumber2 = (String)obj[0];					
+					}
+				}
 
 				if(cloudNumber1.equals(cloudNumber2)){
 					LOGGER.info("cloud: {} is not having any unread message, so exiting");

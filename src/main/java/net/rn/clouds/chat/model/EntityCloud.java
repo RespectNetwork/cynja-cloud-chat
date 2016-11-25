@@ -5,11 +5,15 @@ package net.rn.clouds.chat.model;
 
 import java.sql.Timestamp;
 import java.util.Date;
+import java.util.List;
+
 import javax.persistence.Basic;
+import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
+import javax.persistence.OneToMany;
 import javax.persistence.Table;
 
 /**
@@ -106,6 +110,11 @@ public class EntityCloud {
      */
 	@Column(name = "guardian_consent")
     private String guardianConsent;
+
+	/**
+     * List of CloudName
+     */
+    private List<CloudName> cloudNames = null;
 	
     /**    
      * @return entityCloudId
@@ -328,5 +337,20 @@ public class EntityCloud {
      */
     public void setGuardianConsent(String guardianConsent) {
         this.guardianConsent = guardianConsent;
+    }
+
+    /**
+     * Get the list of CloudName
+     */
+    @OneToMany(mappedBy = "entityCloud", cascade = { CascadeType.ALL })
+    public List<CloudName> getCloudNames() {
+        return this.cloudNames;
+    }
+
+    /**
+     * Set the list of CloudName
+     */
+    public void setCloudNames(List<CloudName> cloudNames) {
+        this.cloudNames = cloudNames;
     }
 }
