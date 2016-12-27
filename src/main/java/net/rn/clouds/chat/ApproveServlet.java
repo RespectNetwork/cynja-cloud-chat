@@ -10,11 +10,15 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import net.rn.clouds.chat.constants.ChatErrors;
+import net.rn.clouds.chat.exceptions.ChatSystemException;
+import net.rn.clouds.chat.exceptions.ChatValidationException;
+import net.rn.clouds.chat.util.Utility;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import xdi2.core.syntax.XDIAddress;
-import xdi2.core.syntax.parser.ParserException;
 import biz.neustar.clouds.chat.CynjaCloudChat;
 
 /**
@@ -29,33 +33,29 @@ public class ApproveServlet extends HttpServlet {
 	@Override
 	protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 
-		XDIAddress cloud = null;
-		XDIAddress cloud1 = null;
-		XDIAddress cloud2 = null;
-		
-		try{			
-			cloud = XDIAddress.create(req.getParameter("cloud"));
-		}catch(ParserException pe){
-			LOGGER.error("Incorrect cloud format: "+req.getParameter("cloud"));
-			throw new ParserException("Incorrect cloud format: "+req.getParameter("cloud"));
-		}
-		
-		try{		
-			cloud1 = XDIAddress.create(req.getParameter("cloud1"));
-		}catch(ParserException pe){	
-			LOGGER.error("Incorrect cloud format: "+req.getParameter("cloud1"));
-			throw new ParserException("Incorrect cloud format: "+req.getParameter("cloud1"));
-		}
-		
-		try{		
-			cloud2 = XDIAddress.create(req.getParameter("cloud2"));
-		}catch(ParserException pe){
-			LOGGER.error("Incorrect cloud format: "+req.getParameter("cloud2"));
-			throw new ParserException("Incorrect cloud format: "+req.getParameter("cloud2"));
-		}
-				
-		String cloudSecretToken = req.getParameter("cloudSecretToken");
+		try{
+			XDIAddress cloud = Utility.createXDIAddress(req.getParameter("cloud"));
+			XDIAddress cloud1 = Utility.createXDIAddress(req.getParameter("cloud1"));
+			XDIAddress cloud2 = Utility.createXDIAddress(req.getParameter("cloud2"));
 
-		CynjaCloudChat.connectionServiceImpl.approveConnection(cloud, cloudSecretToken, cloud1, cloud2);
+			String cloudSecretToken = req.getParameter("cloudSecretToken");
+
+			CynjaCloudChat.connectionServiceImpl.approveConnection(cloud, cloudSecretToken, cloud1, cloud2);
+
+		}catch(ChatValidationException ve){
+
+			LOGGER.error("ErrorCode: [{}] : ErrorMessage: {}", ve.getErrorCode(), ve.getErrorDescription(), ve);
+			Utility.handleChatException(resp, ve.getErrorCode(), ve.getErrorDescription());
+
+		}catch(ChatSystemException se){
+
+			LOGGER.error("ErrorCode: [{}] : ErrorMessage: {}", se.getErrorCode(), se.getErrorDescription(), se);
+			Utility.handleChatException(resp, se.getErrorCode(), se.getErrorDescription());
+
+		}catch(Exception ex){
+
+			LOGGER.error("ErrorCode: [{}] : ErrorMessage: {}",ChatErrors.SYSTEM_ERROR.getErrorCode(), ex.getMessage(), ex);
+			Utility.handleChatException(resp, ChatErrors.SYSTEM_ERROR.getErrorCode(), ChatErrors.SYSTEM_ERROR.getErrorMessage());
+		}
 	}
 }

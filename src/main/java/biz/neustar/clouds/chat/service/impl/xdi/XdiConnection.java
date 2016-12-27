@@ -54,7 +54,8 @@ public class XdiConnection implements Connection {
 				tempGraph, 
 				child1, 
 				child2, 
-				XDI_ADD_CHAT, 
+				null,
+				XDI_ARC_CHAT, 
 				true);
 
 		this.linkContract1 = linkContract1;
@@ -127,5 +128,5 @@ public class XdiConnection implements Connection {
                 .getRelation(XDIDictionaryConstants.XDI_ADD_IS_REF).getTargetXDIAddress();
 
         return CloudName.fromXDIAddress(mrXDIAddress);
-    }
+    }      
 }

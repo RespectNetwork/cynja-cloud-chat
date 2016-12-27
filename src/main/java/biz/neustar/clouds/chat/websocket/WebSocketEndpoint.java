@@ -70,16 +70,23 @@ public class WebSocketEndpoint extends javax.websocket.Endpoint {
 		log.info("Installed WebSocket endpoint at " + PATH + " with subprotocols " + subprotocols);
 	}
 
-	public static void send(WebSocketMessageHandler fromWebSocketMessageHandler, String line) {
+	public static void send(WebSocketMessageHandler fromWebSocketMessageHandler, String line, Integer messageId) {
 
 		for (WebSocketMessageHandler webSocketMessageHandler : WEBSOCKETMESSAGEHANDLERS) {
+
+			if (fromWebSocketMessageHandler.getChild2().equals(webSocketMessageHandler.getChild1())){
+
+				if(fromWebSocketMessageHandler.getConnection().isBlocked2() || !fromWebSocketMessageHandler.getConnection().isApproved2()){
+					continue;
+				}
+			}
 
 			if ((fromWebSocketMessageHandler.getChild1().equals(webSocketMessageHandler.getChild2()) &&
 					fromWebSocketMessageHandler.getChild2().equals(webSocketMessageHandler.getChild1())) || (
 							fromWebSocketMessageHandler.getChild1().equals(webSocketMessageHandler.getChild1()) &&
 							fromWebSocketMessageHandler.getChild2().equals(webSocketMessageHandler.getChild2()))) {
 
-				webSocketMessageHandler.send(fromWebSocketMessageHandler, line);
+				webSocketMessageHandler.send(fromWebSocketMessageHandler, line, messageId);
 			}
 		}
 	}
@@ -111,7 +118,6 @@ public class WebSocketEndpoint extends javax.websocket.Endpoint {
 			// check connection
 
 			Connection connection = null;
-			
 			if("1".equalsIgnoreCase(version)){
 				connection = CynjaCloudChat.connectionService.findConnection(child1, child1SecretToken, child2);
 			}else if("v2".equalsIgnoreCase(version)){
@@ -124,13 +130,13 @@ public class WebSocketEndpoint extends javax.websocket.Endpoint {
 				return;
 			}
 
-			if (! Boolean.TRUE.equals(connection.isApproved1()) || ! Boolean.TRUE.equals(connection.isApproved2())) {
+			if (! Boolean.TRUE.equals(connection.isApproved1())){
 
 				session.close(new CloseReason(CloseCodes.VIOLATED_POLICY, "Connection is not approved yet."));
 				return;
 			}
 
-			if (Boolean.TRUE.equals(connection.isBlocked1()) || Boolean.TRUE.equals(connection.isBlocked2())) {
+			if (Boolean.TRUE.equals(connection.isBlocked1())){
 
 				session.close(new CloseReason(CloseCodes.VIOLATED_POLICY, "Connection is temporarily blocked."));
 				return;
@@ -142,7 +148,7 @@ public class WebSocketEndpoint extends javax.websocket.Endpoint {
 
 			// create message handler
 
-			WebSocketMessageHandler webSocketMessageHandler = new WebSocketMessageHandler(session, child1, child2, connection);
+			WebSocketMessageHandler webSocketMessageHandler = new WebSocketMessageHandler(session, connection.getChild1(), connection.getChild2(), connection);
 
 			session.addMessageHandler(webSocketMessageHandler);
 			WEBSOCKETMESSAGEHANDLERS.add(webSocketMessageHandler);

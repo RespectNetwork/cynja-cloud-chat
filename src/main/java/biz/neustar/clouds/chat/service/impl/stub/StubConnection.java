@@ -74,5 +74,5 @@ public class StubConnection implements Connection {
     public CloudName getConnectionName() {
         // TODO Auto-generated method stub
         return null;
-    }
+    }       
 }

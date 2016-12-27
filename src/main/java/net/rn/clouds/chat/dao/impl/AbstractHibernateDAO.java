@@ -18,23 +18,22 @@ import org.hibernate.Query;
 import org.hibernate.Session;
 import org.hibernate.Transaction;
 import org.hibernate.criterion.Criterion;
-import org.hibernate.criterion.Example;
+import org.hibernate.criterion.Order;
 import org.hibernate.criterion.Restrictions;
 import org.springframework.orm.hibernate4.support.HibernateDaoSupport;
 
 /**
  * @author Noopur Pandey
- *
+ * 
  */
-public class AbstractHibernateDAO<T, ID extends Serializable> extends
-HibernateDaoSupport implements GenericDAO<T, ID> {
+public class AbstractHibernateDAO<T, ID extends Serializable> extends HibernateDaoSupport implements GenericDAO<T, ID> {
 
-	private Class<T> persistentClass;
+    private Class<T> persistentClass;
 
     @SuppressWarnings("unchecked")
     public AbstractHibernateDAO() {
-        this.persistentClass = (Class<T>) ((ParameterizedType) getClass()
-                .getGenericSuperclass()).getActualTypeArguments()[0];
+        this.persistentClass = (Class<T>) ((ParameterizedType) getClass().getGenericSuperclass())
+                .getActualTypeArguments()[0];
     }
 
     public Class<T> getPersistentClass() {
@@ -43,34 +42,36 @@ HibernateDaoSupport implements GenericDAO<T, ID> {
 
     @SuppressWarnings("unchecked")
     public T getById(ID id) {
-    	
-    	HibernateConf config = HibernateConf.getInstance();
-    	 Session session = config.getSessionFactory().openSession();
-         
-         Transaction transaction = session.beginTransaction();
-         
-        return (T) session.get(
-                getPersistentClass(), id);
-                
+
+        HibernateConf config = HibernateConf.getInstance();
+        Session session = config.getSessionFactory().openSession();
+
+        Transaction transaction = session.beginTransaction();
+
+        return (T) session.get(getPersistentClass(), id);
+
     }
 
     @SuppressWarnings("unchecked")
     public T getById(ID id, boolean lock) {
-        if (lock) {        	
-            return (T) getSessionFactory().getCurrentSession().get(
-                    getPersistentClass(), id, LockOptions.UPGRADE);
+        if (lock) {
+            return (T) getSessionFactory().getCurrentSession().get(getPersistentClass(), id, LockOptions.UPGRADE);
         } else
             return getById(id);
     }
 
     @SuppressWarnings("unchecked")
     public T loadById(ID id) {
-        return (T) getSessionFactory().getCurrentSession().load(
-                getPersistentClass(), id);
+        return (T) getSessionFactory().getCurrentSession().load(getPersistentClass(), id);
     }
 
-    public void save(T entity) {
-        getSessionFactory().getCurrentSession().save(entity);
+    public Integer save(T entity) {
+        Session session = getSession();
+        Transaction transaction = session.beginTransaction();
+        Integer id = (Integer)session.save(entity);
+        transaction.commit();
+        session.close();
+        return id;
     }
 
     public void update(T entity) {
@@ -98,34 +99,29 @@ HibernateDaoSupport implements GenericDAO<T, ID> {
      */
     @SuppressWarnings("unchecked")
     protected List<T> findByCriteria(Criterion... criterion) {
-    	try {
-    		
-    		HibernateConf config = HibernateConf.getInstance();
+        try {
+
+            HibernateConf config = HibernateConf.getInstance();
             Session session = config.getSessionFactory().openSession();
-            
-             
+
             Transaction transaction = session.beginTransaction();
-            
+
             Criteria crit = session.createCriteria(getPersistentClass());
             for (Criterion c : criterion) {
                 crit.add(c);
             }
-            
-            transaction.commit();           
-            return crit.list();
 
-    	 } catch (HibernateException e) { 
-    		 e.printStackTrace();
-    		 System.out.println(e.getMessage());
-             return null;
-         }
+            transaction.commit();
+            List<T> list = crit.list();
+            session.close();
+            return list;
 
-        /*Criteria crit = getSessionFactory().getCurrentSession().createCriteria(
-                getPersistentClass());
-        for (Criterion c : criterion) {
-            crit.add(c);
+        } catch (HibernateException e) {
+            e.printStackTrace();
+            System.out.println(e.getMessage());
+            return null;
         }
-        return crit.list();*/
+
     }
 
     /**
@@ -134,8 +130,7 @@ HibernateDaoSupport implements GenericDAO<T, ID> {
     @SuppressWarnings({ "unchecked", "rawtypes" })
     public List<T> findByCriteria(Map criterias) {
 
-        Criteria criteria = getSessionFactory().getCurrentSession()
-                .createCriteria(getPersistentClass());
+        Criteria criteria = getSessionFactory().getCurrentSession().createCriteria(getPersistentClass());
         criteria.add(Restrictions.allEq(criterias));
         return criteria.list();
     }
@@ -144,8 +139,7 @@ HibernateDaoSupport implements GenericDAO<T, ID> {
      * This method will execute an HQL query and return the number of affected
      * entities.
      */
-    protected int executeQuery(String query, String namedParams[],
-            Object params[]) {
+    protected int executeQuery(String query, String namedParams[], Object params[]) {
         Query q = getSessionFactory().getCurrentSession().createQuery(query);
 
         if (namedParams != null) {
@@ -165,10 +159,8 @@ HibernateDaoSupport implements GenericDAO<T, ID> {
      * This method will execute a Named HQL query and return the number of
      * affected entities.
      */
-    protected int executeNamedQuery(String namedQuery, String namedParams[],
-            Object params[]) {
-        Query q = getSessionFactory().getCurrentSession().getNamedQuery(
-                namedQuery);
+    protected int executeNamedQuery(String namedQuery, String namedParams[], Object params[]) {
+        Query q = getSessionFactory().getCurrentSession().getNamedQuery(namedQuery);
 
         if (namedParams != null) {
             for (int i = 0; i < namedParams.length; i++) {
@@ -183,22 +175,37 @@ HibernateDaoSupport implements GenericDAO<T, ID> {
         return executeNamedQuery(namedQuery, null, null);
     }
 
-    @SuppressWarnings("unchecked")
-    public List<T> findByExample(T exampleInstance, String[] excludeProperty) {
-        Criteria crit = getSessionFactory().getCurrentSession().createCriteria(
-                getPersistentClass());
-        Example example = Example.create(exampleInstance).excludeZeroes()
-                .enableLike().ignoreCase();
-        for (String exclude : excludeProperty) {
-            example.excludeProperty(exclude);
-        }
-        crit.add(example);
-        return crit.list();
+    public Session getSession() {
+
+        HibernateConf config = HibernateConf.getInstance();
+        return config.getSessionFactory().openSession();
     }
 
-    public Session getSession() {
-    	
-    	HibernateConf config = HibernateConf.getInstance();
-        return config.getSessionFactory().openSession();        
+    /**
+     * Use this inside subclasses as a convenience method.
+     */
+    @SuppressWarnings("unchecked")
+    protected List<T> findByCriteria(int offset, int limit, String sortOrder, String sortBy, Criterion... criterion) {
+            Session session = getSession();
+            Transaction transaction = session.beginTransaction();
+
+            Criteria crit = session.createCriteria(getPersistentClass());
+            for (Criterion c : criterion) {
+                crit.add(c);
+            }
+
+            if(sortOrder != null && sortBy != null){
+            if ("asc".equalsIgnoreCase(sortOrder)) {
+                crit.addOrder(Order.asc(sortBy));
+            } else {
+                crit.addOrder(Order.desc(sortBy));
+            }
+            }
+            crit.setFirstResult(offset);
+            crit.setMaxResults(limit);
+            transaction.commit();
+            List<T> list = crit.list();
+            session.close();
+            return list;
     }
 }

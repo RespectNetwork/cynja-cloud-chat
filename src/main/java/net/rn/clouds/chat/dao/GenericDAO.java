@@ -23,9 +23,7 @@ public interface GenericDAO<T, ID extends Serializable> {
 
     List<T> findByCriteria(Map criterias);
 
-    public List<T> findByExample(T exampleInstance, String[] excludeProperty);
-
-    void save(T entity);
+    Integer save(T entity);
 
     void update(T entity);
 

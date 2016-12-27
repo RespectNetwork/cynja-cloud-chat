@@ -4,7 +4,6 @@
 package net.rn.clouds.chat;
 
 import java.io.IOException;
-import java.util.List;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -14,51 +13,42 @@ import javax.servlet.http.HttpServletResponse;
 import net.rn.clouds.chat.constants.ChatErrors;
 import net.rn.clouds.chat.exceptions.ChatSystemException;
 import net.rn.clouds.chat.exceptions.ChatValidationException;
-import net.rn.clouds.chat.model.ChatMessage;
+import net.rn.clouds.chat.service.impl.ConnectionImpl;
 import net.rn.clouds.chat.util.Utility;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import xdi2.core.syntax.XDIAddress;
-import biz.neustar.clouds.chat.CynjaCloudChat;
-import biz.neustar.clouds.chat.model.QueryInfo;
-import biz.neustar.clouds.chat.util.JsonUtil;
+import com.google.gson.JsonObject;
 
-import com.google.gson.JsonArray;
+import biz.neustar.clouds.chat.CynjaCloudChat;
+import biz.neustar.clouds.chat.util.JsonUtil;
+import xdi2.core.syntax.XDIAddress;
 
 /**
  * @author Noopur Pandey
  *
  */
-public class LogsServlet extends HttpServlet{
-	
-	private static final long serialVersionUID = 2806072987404647289L;
-	private static final Logger LOGGER = LoggerFactory.getLogger(LogsServlet.class);
+public class NotificationsServlet extends HttpServlet{
+
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -7591749842095897057L;
+	private static final Logger LOGGER = LoggerFactory.getLogger(NotificationsServlet.class);
 	
 	@Override
 	protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 		
 		try{
 			XDIAddress cloud = Utility.createXDIAddress(req.getParameter("cloud"));
-			XDIAddress cloud1 = Utility.createXDIAddress(req.getParameter("cloud1"));
-			XDIAddress cloud2 = Utility.createXDIAddress(req.getParameter("cloud2"));
 			String cloudSecretToken = req.getParameter("cloudSecretToken");
-
-			QueryInfo queryInfo = Utility.createQueryInfo(req);
-
-			List<ChatMessage> logs = CynjaCloudChat.connectionServiceImpl.chatHistory(cloud, cloudSecretToken, cloud1, cloud2, queryInfo);
-
-			JsonArray jsonArray = new JsonArray();
-			resp.setContentType("appliction/json");
-
-			for (ChatMessage log : logs) {
-				jsonArray.add(JsonUtil.chatHistoryToJson(log));
-			}
-
-			JsonUtil.write(resp.getWriter(), jsonArray);
 			
-			CynjaCloudChat.connectionServiceImpl.updateChatStatus(cloud1, logs);
+			ConnectionImpl[] connections = (ConnectionImpl[])CynjaCloudChat.connectionServiceImpl.notifications(cloud, cloudSecretToken);
+			
+			JsonObject jsonObject = JsonUtil.notificationToJson(connections);
+			resp.setContentType("appliction/json");
+			JsonUtil.write(resp.getWriter(), jsonObject);
 
 		}catch(ChatValidationException ve){
 

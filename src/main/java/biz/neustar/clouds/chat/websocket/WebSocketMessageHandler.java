@@ -54,25 +54,33 @@ public class WebSocketMessageHandler implements javax.websocket.MessageHandler.W
 			throw new RuntimeException(ex.getMessage(), ex);
 		}
 
+        boolean isOnline = isFriendOnline();
+        log.info("is other cloud: {} online:{}", child2.toString(), isOnline);
+
 		log.info("Received line " + line + " from session " + this.session.getId());
-
-		// log line
-
-		CynjaCloudChat.logService.addLog(this, this.connection, line);
+		// log message for chat history
+        Integer messageId =0;
+        try {
+            messageId = CynjaCloudChat.logService.addLog(this, this.connection, line, isOnline);
+        } catch(Exception ex) {
+            log.error("Error while storing chat message {} for session : {}", line, this.session.getId());
+        }
 
 		// send line to message handlers
+        log.debug("Message Id is :{}", messageId);
 
-		WebSocketEndpoint.send(this, line);
+		WebSocketEndpoint.send(this, line, messageId);
 	}
 
-	public void send(WebSocketMessageHandler fromWebSocketMessageHandler, String line) {
-
-		JsonObject jsonObject = new JsonObject();
+	public void send(WebSocketMessageHandler fromWebSocketMessageHandler, String line, Integer messageId) {
+	 
+	    JsonObject jsonObject = new JsonObject();
 		jsonObject.add("chatChild1", new JsonPrimitive(fromWebSocketMessageHandler.getChild1().toString()));
 		jsonObject.add("chatChild2", new JsonPrimitive(fromWebSocketMessageHandler.getChild2().toString()));
 		jsonObject.add("connectionChild1", new JsonPrimitive(fromWebSocketMessageHandler.getConnection().getChild1().toString()));
 		jsonObject.add("connectionChild2", new JsonPrimitive(fromWebSocketMessageHandler.getConnection().getChild2().toString()));
 		jsonObject.add("message", new JsonPrimitive(line));
+		jsonObject.add("messageId", new JsonPrimitive(messageId));
 
 		String string = JsonUtil.toString(jsonObject);
 
@@ -103,5 +111,26 @@ public class WebSocketMessageHandler implements javax.websocket.MessageHandler.W
 	public Connection getConnection() {
 
 		return this.connection;
+	}
+
+	/* (non-Javadoc)
+	 * @see java.lang.Object#equals(java.lang.Object)
+	 */
+	@Override
+	public boolean equals(Object obj) {
+		if(obj instanceof WebSocketMessageHandler){
+			WebSocketMessageHandler handler = (WebSocketMessageHandler)obj;
+			if( handler.getChild1().equals(this.child1) 
+					&& handler.getChild2().equals(this.child2)){
+						return true;
+					}
+		}
+		return false;
+	}
+
+	private boolean isFriendOnline(){
+
+		WebSocketMessageHandler handler = new WebSocketMessageHandler(this.session, this.child2, child1, connection);
+        return WebSocketEndpoint.WEBSOCKETMESSAGEHANDLERS.contains(handler);
 	}
 }

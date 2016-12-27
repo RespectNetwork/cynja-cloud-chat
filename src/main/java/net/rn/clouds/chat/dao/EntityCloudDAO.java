@@ -26,6 +26,15 @@ public interface EntityCloudDAO {
     public List<EntityCloud> findByGuardianId(Integer guardianId);
 
     /**
-     * Find EntityCloud by dob
+     * @param cloudNumber
+     * @return
      */
+    public List<String> findDependentByGuardian(String cloudNumber);
+
+    /**
+     * Find by cloudNumber or cloudName
+     * @param cloud
+     * @return
+     */
+    public List<Object[]> findByCloud(String cloud);
 }
