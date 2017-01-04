@@ -11,6 +11,7 @@ import javax.persistence.Basic;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
 import javax.persistence.OneToMany;
@@ -18,105 +19,114 @@ import javax.persistence.Table;
 
 /**
  * @author Noopur Pandey
- *
+ * 
  */
 @Entity
 @Table(name = "entity_cloud")
 @SuppressWarnings("serial")
-public class EntityCloud {	    
-    
-	 /**
+public class EntityCloud {
+
+    /**
      * Attribute entityCloudId.
      */
-	@Id
+    @Id
     @GeneratedValue
-	@Column(name = "entity_cloud_id")
-    private Integer entityCloudId;    
+    @Column(name = "entity_cloud_id")
+    private Integer entityCloudId;
 
     /**
      * Attribute cloudNumber.
      */
-	@Column(name = "cloud_number")
+    @Column(name = "cloud_number")
     private String cloudNumber;
 
     /**
      * Attribute cloudType.
      */
-	@Column(name = "cloud_type")
+    @Column(name = "cloud_type")
     private String cloudType;
 
     /**
      * Attribute guardianId.
      */
-	@Column(name = "guardian_id")
+    @Column(name = "guardian_id")
     private Integer guardianId;
 
     /**
      * Attribute dob.
      */
-	@Column(name = "dob")
+    @Column(name = "dob")
     private Date dob;
 
     /**
      * Attribute email.
      */
-	@Column(name = "email")
+    @Column(name = "email")
     private String email;
 
     /**
      * Attribute phone.
      */
-	@Column(name = "phone")
+    @Column(name = "phone")
     private String phone;
 
     /**
      * Attribute term.
      */
-	@Column(name = "term")
+    @Column(name = "term")
     private Integer term;
 
     /**
      * Attribute expirationDate.
      */
-	@Column(name = "expiration_date")
+    @Column(name = "expiration_date")
     private Timestamp expirationDate;
 
     /**
      * Attribute statusId.
      */
-	@Column(name = "status_id")
+    @Column(name = "status_id")
     private Integer statusId;
 
     /**
      * Attribute payment
      */
-	@Column(name = "payment_id")
+    @Column(name = "payment_id")
     private Integer payment;
 
     /**
      * Attribute synonymCount.
      */
-	@Column(name = "synonym_count")
+    @Column(name = "synonym_count")
     private Integer synonymCount;
 
     /**
      * Attribute createdDate.
      */
-	@Column(name = "created_date")
-    private Timestamp createdDate; 		
+    @Column(name = "created_date")
+    private Timestamp createdDate;
 
-	/**
+    /**
      * Guardian consent for creating dependent.
      */
-	@Column(name = "guardian_consent")
+    @Column(name = "guardian_consent")
     private String guardianConsent;
 
-	/**
+    /**
      * List of CloudName
      */
     private List<CloudName> cloudNames = null;
-	
-    /**    
+
+    /**
+     * Keeps the hash password of the cloud.
+     */
+    private byte[] password;
+    /**
+     * Keeps the salt used to hash the password.
+     */
+    private byte[] salt;
+
+    /**
      * @return entityCloudId
      */
     @Basic
@@ -134,8 +144,8 @@ public class EntityCloud {
     public void setEntityCloudId(Integer entityCloudId) {
         this.entityCloudId = entityCloudId;
     }
-   
-    /**    
+
+    /**
      * @return cloudNumber
      */
     @Basic
@@ -152,7 +162,7 @@ public class EntityCloud {
         this.cloudNumber = cloudNumber;
     }
 
-    /**     
+    /**
      * @return cloudType
      */
     @Basic
@@ -169,7 +179,7 @@ public class EntityCloud {
         this.cloudType = cloudType;
     }
 
-    /**     
+    /**
      * @return guardianId
      */
     @Basic
@@ -286,7 +296,7 @@ public class EntityCloud {
      */
     public void setStatusId(Integer statusId) {
         this.statusId = statusId;
-    }   
+    }
 
     /**
      * @return synonymCount
@@ -322,7 +332,7 @@ public class EntityCloud {
         this.createdDate = createdDate;
     }
 
-    /**     
+    /**
      * @return guardianConsent
      */
     @Basic
@@ -342,7 +352,7 @@ public class EntityCloud {
     /**
      * Get the list of CloudName
      */
-    @OneToMany(mappedBy = "entityCloud", cascade = { CascadeType.ALL })
+    @OneToMany(fetch=FetchType.EAGER, mappedBy = "entityCloud", cascade = { CascadeType.ALL })
     public List<CloudName> getCloudNames() {
         return this.cloudNames;
     }
@@ -352,5 +362,37 @@ public class EntityCloud {
      */
     public void setCloudNames(List<CloudName> cloudNames) {
         this.cloudNames = cloudNames;
+    }
+
+    /**
+     * @return the password
+     */
+    public byte[] getPassword() {
+        return password;
+    }
+
+    /**
+     * @param password
+     *            the password to set
+     */
+    public void setPassword(byte[] password) {
+        this.password = password;
+    }
+
+    /**
+     * @return the salt
+     */
+    @Basic
+    @Column(name = "pwd_salt")
+    public byte[] getSalt() {
+        return salt;
+    }
+
+    /**
+     * @param salt
+     *            the salt to set
+     */
+    public void setSalt(byte[] salt) {
+        this.salt = salt;
     }
 }

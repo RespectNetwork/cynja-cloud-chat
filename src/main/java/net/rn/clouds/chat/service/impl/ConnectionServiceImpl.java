@@ -60,7 +60,7 @@ public class ConnectionServiceImpl implements ConnectionService{
 				LOGGER.info("Invalid connection requested between {} and {}",cloud1.toString(), cloud2.toString());
 				throw new ChatValidationException(ChatErrors.INVALID_CONNECTION_REQUEST.getErrorCode(), ChatErrors.INVALID_CONNECTION_REQUEST.getErrorMessage());
 			}
-			Utility.authenticate(cloud1, cloud1SecretToken);
+			Utility.authenticate(cloud1.toString(), cloud1SecretToken);
 			EntityCloudDAO entityDAO = new EntityCloudHibernateDAO();
 			List<Object[]> cloudList1 = entityDAO.findByCloud(cloud1.toString());
 			List<Object[]> cloudList2 = entityDAO.findByCloud(cloud2.toString());
@@ -245,7 +245,7 @@ public class ConnectionServiceImpl implements ConnectionService{
 
 		LOGGER.info("Enter approveConnection with approverCloud: {}, cloud1: {}, cloud2: {}", cloud, cloud1, cloud2);
 		try {
-			Utility.authenticate(cloud, cloudSecretToken);
+			Utility.authenticate(cloud.toString(), cloudSecretToken);
 			EntityCloudDAO entityDAO = new EntityCloudHibernateDAO();
 			List<Object[]> cloudList = entityDAO.findByCloud(cloud.toString());
 			List<Object[]> cloudList1 = entityDAO.findByCloud(cloud1.toString());
@@ -480,7 +480,7 @@ public class ConnectionServiceImpl implements ConnectionService{
 		LOGGER.info("Enter viewConnectionsAsParent with parent: {} ", parent);
 		List<Connection> connectionList = new ArrayList<Connection>();
 		try {
-			Utility.authenticate(parent, parentSecretToken);
+			Utility.authenticate(parent.toString(), parentSecretToken);
 			EntityCloudDAO entityDAO = new EntityCloudHibernateDAO();
 			List<Object[]> cloudList = entityDAO.findByCloud(parent.toString());
 
@@ -721,7 +721,7 @@ public class ConnectionServiceImpl implements ConnectionService{
 		List<Connection> connectionList = new ArrayList<Connection>();				
 
 		try {
-			Utility.authenticate(cloud, cloudSecretToken);
+			Utility.authenticate(cloud.toString(), cloudSecretToken);
 			EntityCloudDAO entityDAO = new EntityCloudHibernateDAO();
 			List<Object[]> cloudList = entityDAO.findByCloud(cloud.toString());
 			String cloudNumber = null;			
@@ -909,7 +909,7 @@ public class ConnectionServiceImpl implements ConnectionService{
 
 		LOGGER.info("Enter logsConnection with cloud: {} for cloud1: {}, cloud2: {}", cloud, cloud1, cloud2);
 		try {
-			Utility.authenticate(cloud, cloudSecretToken);
+			Utility.authenticate(cloud.toString(), cloudSecretToken);
 			EntityCloudDAO entityDAO = new EntityCloudHibernateDAO();
 			List<Object[]> cloudList = entityDAO.findByCloud(cloud.toString());
 			List<Object[]> cloudList1 = entityDAO.findByCloud(cloud1.toString());
@@ -960,7 +960,7 @@ public class ConnectionServiceImpl implements ConnectionService{
 		
 		LOGGER.info("Enter blockConnection with cloud: {}, cloud1: {}, cloud2: {}", cloud, cloud1, cloud2);
 		try {
-			Utility.authenticate(cloud, cloudSecretToken);
+			Utility.authenticate(cloud.toString(), cloudSecretToken);
 			EntityCloudDAO entityDAO = new EntityCloudHibernateDAO();
 			List<Object[]> cloudList = entityDAO.findByCloud(cloud.toString());
 			List<Object[]> cloudList1 = entityDAO.findByCloud(cloud1.toString());
@@ -1117,7 +1117,7 @@ public class ConnectionServiceImpl implements ConnectionService{
 		LOGGER.info("Enter unblockConnection with cloud: {}, cloud1: {}, cloud2: {}", cloud, cloud1, cloud2);
 		try {			
 			
-			Utility.authenticate(cloud, cloudSecretToken);
+			Utility.authenticate(cloud.toString(), cloudSecretToken);
 			EntityCloudDAO entityDAO = new EntityCloudHibernateDAO();
 			List<Object[]> cloudList = entityDAO.findByCloud(cloud.toString());
 			List<Object[]> cloudList1 = entityDAO.findByCloud(cloud1.toString());
@@ -1259,7 +1259,7 @@ public class ConnectionServiceImpl implements ConnectionService{
 		
 		LOGGER.info("Enter deleteConnection with cloud: {}, cloud1: {}, cloud2: {}", cloud, cloud1, cloud2);
 		try {
-			Utility.authenticate(cloud, cloudSecretToken);
+			Utility.authenticate(cloud.toString(), cloudSecretToken);
 			EntityCloudDAO entityDAO = new EntityCloudHibernateDAO();
 			List<Object[]> cloudList = entityDAO.findByCloud(cloud.toString());
 			List<Object[]> cloudList1 = entityDAO.findByCloud(cloud1.toString());
@@ -1424,7 +1424,7 @@ public class ConnectionServiceImpl implements ConnectionService{
 		LOGGER.info("Enter findConnection with requestingCloud: {}, acceptingCloud: {}", cloud1, cloud2);
 		Connection connection = null;
 		try {
-			Utility.authenticate(cloud1, cloud1SecretToken);			  
+			Utility.authenticate(cloud1.toString(), cloud1SecretToken);			  
 			EntityCloudDAO entityDAO = new EntityCloudHibernateDAO();			
 			List<Object[]> cloudList1 = entityDAO.findByCloud(cloud1.toString());
 			List<Object[]> cloudList2 = entityDAO.findByCloud(cloud2.toString());
@@ -1566,7 +1566,7 @@ public class ConnectionServiceImpl implements ConnectionService{
        LOGGER.info("Enter logsConnection with cloud: {} for cloud1: {}, cloud2: {}", cloud, cloud1, cloud2);
        try {
 
-            Utility.authenticate(cloud, cloudSecretToken);
+            Utility.authenticate(cloud.toString(), cloudSecretToken);
     	    EntityCloudDAO entityDAO = new EntityCloudHibernateDAO();
 			List<Object[]> cloudList = entityDAO.findByCloud(cloud.toString());
 			List<Object[]> cloudList1 = entityDAO.findByCloud(cloud1.toString());
@@ -1629,7 +1629,7 @@ public class ConnectionServiceImpl implements ConnectionService{
     	 List<Connection> connectionList = new ArrayList<Connection>();
          try {
 
-             Utility.authenticate(cloud, cloudSecretToken);
+             Utility.authenticate(cloud.toString(), cloudSecretToken);
              
              EntityCloudDAO entityDAO = new EntityCloudHibernateDAO();             
  			 List<Object[]> cloudList = entityDAO.findByCloud(cloud.toString());
