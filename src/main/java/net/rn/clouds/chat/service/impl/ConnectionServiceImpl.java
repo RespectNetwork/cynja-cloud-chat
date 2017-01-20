@@ -85,7 +85,9 @@ public class ConnectionServiceImpl implements ConnectionService{
 					cloud2Name = (String)obj[1];
 				}
 			}
-
+			if(cloud2Number == null) {
+			    throw new ChatValidationException(ChatErrors.CLOUD_NOT_FOUND.getErrorCode(), cloud2.toString()+ChatErrors.CLOUD_NOT_FOUND.getErrorMessage());
+			}
 			LOGGER.info("Checking if connection already requested");
 			ConnectionRequestDAO connectionRequestDAO = new ConnectionRequestDAOImpl();
 			List<ConnectionRequest> connectionRequestList = connectionRequestDAO.getConnectionRequest(cloud1Number, cloud2Number);
