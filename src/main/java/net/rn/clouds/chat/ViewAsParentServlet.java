@@ -38,7 +38,7 @@ public class ViewAsParentServlet extends HttpServlet{
 	protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 
 		try{
-			XDIAddress parent = Utility.creteXDIAddress(req.getParameter("parent"));
+			XDIAddress parent = Utility.createXDIAddress(req.getParameter("parent"));
 			String parentSecretToken = req.getParameter("parentSecretToken");
 
 			ConnectionImpl[] connections = (ConnectionImpl[])CynjaCloudChat.connectionServiceImpl.viewConnectionsAsParent(parent, parentSecretToken);

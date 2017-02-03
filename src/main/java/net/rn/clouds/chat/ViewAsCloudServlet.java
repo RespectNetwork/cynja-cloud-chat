@@ -38,7 +38,7 @@ public class ViewAsCloudServlet extends HttpServlet {
 	protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 
 		try{
-			XDIAddress cloud = Utility.creteXDIAddress(req.getParameter("cloud"));
+			XDIAddress cloud = Utility.createXDIAddress(req.getParameter("cloud"));
 			String cloudSecretToken = req.getParameter("cloudSecretToken");
 
 			ConnectionImpl[] connections = (ConnectionImpl[])CynjaCloudChat.connectionServiceImpl.viewConnectionsAsChild(cloud, cloudSecretToken);

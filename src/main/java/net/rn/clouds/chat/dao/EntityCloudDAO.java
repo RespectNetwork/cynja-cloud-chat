@@ -30,4 +30,11 @@ public interface EntityCloudDAO {
      * @return
      */
     public List<String> findDependentByGuardian(String cloudNumber);
+
+    /**
+     * Find by cloudNumber or cloudName
+     * @param cloud
+     * @return
+     */
+    public List<Object[]> findByCloud(String cloud);
 }
